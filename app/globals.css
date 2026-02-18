@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-color: #f4f1ea;
+  --border: #1a1a1a;
+  --pop-yellow: #ffde59;
+  --pop-teal: #5ce1e6;
+  --pop-orange: #ff914d;
+  --pop-pink: #ff66c4;
+  --shadow: 4px 4px 0 0 var(--border);
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--border);
+  font-family: var(--font-body), monospace;
+  background-image: radial-gradient(#d1d1d1 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+h1,
+h2,
+h3,
+.brand {
+  font-family: var(--font-heading), sans-serif;
+}
+
+/* --- BRUTALIST UI --- */
+.neo-box {
+  background: white;
+  border: 3px solid var(--border);
+  box-shadow: var(--shadow);
+  transition: all 0.2s ease;
+}
+
+.neo-btn {
+  border: 3px solid var(--border);
+  box-shadow: var(--shadow);
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.neo-btn:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 0 var(--border);
+}
+
+.neo-btn:active {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
+
+/* --- SLIDER --- */
+.char-scroll {
+  display: flex;
+  overflow-x: auto;
+  gap: 12px;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+}
+
+.char-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.char-card {
+  min-width: 140px;
+  opacity: 0.6;
+  filter: grayscale(100%);
+  transition: all 0.3s;
+  transform: scale(0.95);
+  cursor: pointer;
+}
+
+.char-card:hover {
+  opacity: 0.9;
+  transform: scale(0.98);
+}
+
+.char-card.active {
+  opacity: 1;
+  filter: grayscale(0%);
+  transform: scale(1.05) rotate(-1deg);
+  z-index: 10;
+  border-color: black;
+  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 0.1);
+}
+
+/* --- ANIMATIONS --- */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-3px, 3px);
+  }
+  50% {
+    transform: translate(3px, -3px);
+  }
+  75% {
+    transform: translate(-3px, -3px);
+  }
+}
+
+.shake-it {
+  animation: shake 0.4s infinite;
+}
+
+.hover\:shake-it:hover {
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes drip {
+  0% { transform: translateY(-100%); opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+.animate-drip {
+  animation: drip 2s infinite linear;
+}
+
+.category-tab {
+  background: transparent;
+  border: 2px solid transparent;
+  opacity: 0.5;
+}
+
+.category-tab.active {
+  background: var(--pop-yellow);
+  border: 2px solid var(--border);
+  opacity: 1;
+  box-shadow: 2px 2px 0 var(--border);
+}
