@@ -18,9 +18,12 @@ export async function sendTelegramNotification(message: string) {
       })
     });
 
+    const result = await response.json();
+
     if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Telegram API Error:", errorData);
+        console.error("Telegram API Error:", result);
+    } else {
+        console.log("Telegram Notification Sent Successfully:", result.ok);
     }
   } catch (error) {
     console.error("Failed to send Telegram notification:", error);

@@ -126,7 +126,7 @@ export default function FullScreenRoast({
           headerBg: "bg-red-600",
           headerText: "text-white",
           font: "font-sans",
-          label: "VIOLATION NOTICE",
+          label: persona?.statusLabel || "ROAST CITATION",
         };
       case "receipt":
         return {
@@ -136,7 +136,7 @@ export default function FullScreenRoast({
           headerBg: "bg-gray-100",
           headerText: "text-gray-800",
           font: "font-mono",
-          label: "TRANSACTION FAILED",
+          label: persona?.statusLabel || "TRANSACTION FAILED",
         };
       default:
         return {
@@ -231,8 +231,8 @@ export default function FullScreenRoast({
                         className="object-cover rounded border-2 border-white/30"
                         unoptimized
                       />
-                      <div className="absolute -bottom-2 -right-2 bg-red-600 text-white text-[9px] font-black px-1 py-0.5 rotate-[-12deg] border border-white/50">
-                        FAIL
+                      <div className="absolute -bottom-2 -right-2 bg-red-600 text-white text-[9px] font-black px-1 py-0.5 rotate-[-12deg] border border-white/50 whitespace-nowrap">
+                        {persona.statusLabel || "FAIL"}
                       </div>
                     </div>
 
@@ -248,13 +248,13 @@ export default function FullScreenRoast({
 
                     {/* Score pill */}
                     <div className="shrink-0 flex flex-col items-center bg-red-600 text-white px-3 py-2 border-2 border-white/30 shadow-md">
-                      <span className="font-black text-3xl leading-none">{result.score}</span>
+                      <span className="font-black text-3xl leading-none">🗑️ {100 - result.score}</span>
                       <span className="text-[9px] font-bold uppercase opacity-80">trash score</span>
                     </div>
                   </div>
 
-                  {/* Body */}
-                  <div className="p-5 flex flex-col gap-5">
+                  {/* Body - always white bg */}
+                  <div className="p-5 flex flex-col gap-5 bg-white text-black">
                     {/* Roast — direct, no label, character voice */}
                     <div className="border-l-4 border-red-500 pl-4">
                       <p className="text-base md:text-xl font-bold leading-relaxed italic">
@@ -284,10 +284,10 @@ export default function FullScreenRoast({
                       </span>
                       <button
                         onClick={handleCopy}
-                        className="absolute top-0 right-0 flex items-center gap-1 text-[10px] font-bold uppercase border border-current/30 px-2 py-1 hover:bg-black/10 transition-colors rounded"
+                        className="absolute top-0 right-0 flex items-center gap-1 text-[11px] font-black uppercase bg-[#FFDE59] text-red-600 border-2 border-black px-2 py-1 hover:bg-yellow-300 transition-colors rounded shadow-[2px_2px_0_0_#000]"
                       >
                         {isCopying ? <Check size={11} /> : <Copy size={11} />}
-                        {isCopying ? "Copied" : "Copy"}
+                        {isCopying ? "Copied!" : "Copy"}
                       </button>
                       <p className="text-sm leading-relaxed whitespace-pre-wrap pr-16">
                         {result.fix}
@@ -297,16 +297,16 @@ export default function FullScreenRoast({
                     {/* Fake door banner */}
                     <button
                       onClick={() => setShowFakeDoor(true)}
-                      className="w-full py-2.5 text-white font-bold text-xs uppercase tracking-wider bg-gradient-to-r from-[#FF0080] to-[#7928CA] hover:opacity-90 transition-opacity animate-pulse"
+                      className="w-full py-3 bg-[#FFDE59] text-red-600 font-black text-xs uppercase tracking-wider border-2 border-black shadow-[4px_4px_0_0_#000] hover:bg-yellow-300 transition-all active:translate-y-[2px] active:shadow-none animate-bounce mt-2"
                     >
                       😩 Tired of copy-pasting? Get the Chrome Extension →
                     </button>
                   </div>
 
                   {/* Footer */}
-                  <div className="border-t-2 border-dashed border-current/20 px-5 py-3 flex flex-col sm:flex-row justify-between gap-1 opacity-60 text-[10px] uppercase font-bold">
+                  <div className="border-t-2 border-dashed border-current/20 px-5 py-3 flex flex-col sm:flex-row justify-between gap-1 opacity-60 text-[10px] uppercase font-bold bg-white">
                     <span>Made with 😭 by a dev who sends bad emails.</span>
-                    <span>Not affiliated with your therapist.</span>
+                    <span className="text-blue-600 underline">pitchslap.netlify.app</span>
                   </div>
                 </div>
 
@@ -393,13 +393,13 @@ export default function FullScreenRoast({
         {/* ── SHARE PREVIEW MODAL ───────────────────────── */}
         {showSharePreview && previewImage && (
           <div
-            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            className="fixed inset-0 z-[70] flex flex-col items-center p-4 py-8 bg-black/80 backdrop-blur-sm overflow-y-auto"
             onClick={() => setShowSharePreview(false)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-[#fffdf5] border-4 border-black p-5 w-full max-w-md shadow-[8px_8px_0_0_#000] relative"
+              className="mt-auto mb-auto bg-[#fffdf5] border-4 border-black p-5 w-full max-w-md shadow-[8px_8px_0_0_#000] relative"
               onClick={(e) => e.stopPropagation()}
             >
               <button
@@ -418,7 +418,7 @@ export default function FullScreenRoast({
               <div className="grid grid-cols-2 gap-3">
                 <a
                   href={`https://wa.me/?text=${encodeURIComponent(
-                    `I got roasted by PitchSlap! Score: ${result?.score}/100. "${result?.roast.substring(0, 60)}..." ${typeof window !== "undefined" ? window.location.href : ""}`
+                    `I got roasted by PitchSlap! 🔥 Score: ${result?.score}/100\n"${result?.roast.substring(0, 60)}..."\nRoast yourself at pitchslap.netlify.app`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -428,7 +428,7 @@ export default function FullScreenRoast({
                 </a>
                 <a
                   href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                    `I just got destroyed by PitchSlap! 💀 Score: ${result?.score}/100\n"${result?.roast.substring(0, 80)}..."\n${typeof window !== "undefined" ? window.location.href : ""}`
+                    `I just got destroyed by PitchSlap! 💀 Score: ${result?.score}/100\n"${result?.roast.substring(0, 80)}..."\nRoast yourself: pitchslap.netlify.app`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -450,13 +450,13 @@ export default function FullScreenRoast({
         {/* ── FAKE DOOR MODAL ──────────────────────────── */}
         {showFakeDoor && (
           <div
-            className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
+            className="fixed inset-0 z-[80] flex flex-col items-center p-4 py-8 bg-black/90 backdrop-blur-md overflow-y-auto"
             onClick={() => setShowFakeDoor(false)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-[#5CE1E6] border-4 border-black p-6 md:p-8 w-full max-w-md shadow-[12px_12px_0_0_#fff] relative"
+              className="mt-auto mb-auto bg-[#5CE1E6] border-4 border-black p-6 md:p-8 w-full max-w-md shadow-[12px_12px_0_0_#fff] relative"
               onClick={(e) => e.stopPropagation()}
             >
               <button
@@ -475,7 +475,23 @@ export default function FullScreenRoast({
                     The Extension drops next week.{" "}
                     <span className="bg-black text-white px-1">480 people</span> are already in.
                   </p>
-                  <form onSubmit={(e) => { e.preventDefault(); setWaitlistSuccess(true); }} className="flex flex-col gap-4">
+                  <form 
+                    onSubmit={async (e) => { 
+                      e.preventDefault(); 
+                      try {
+                        await fetch('/api/waitlist', {
+                          method: 'POST',
+                          body: JSON.stringify({ email: emailWaitlist })
+                        });
+                        setWaitlistSuccess(true);
+                      } catch (err) {
+                        console.error("Waitlist error", err);
+                        // Still show success to user for better UX on "fake door"
+                        setWaitlistSuccess(true);
+                      }
+                    }} 
+                    className="flex flex-col gap-4"
+                  >
                     <input
                       type="email"
                       required

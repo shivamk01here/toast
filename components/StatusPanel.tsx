@@ -31,7 +31,7 @@ export default function StatusPanel({ loading, activePersona }: StatusPanelProps
 
       return () => clearInterval(interval);
     }
-  }, [loading]);
+  }, [loading, activePersona.loadingMessage]);
 
   if (loading) {
     return (
@@ -65,7 +65,7 @@ export default function StatusPanel({ loading, activePersona }: StatusPanelProps
         
         <div className="absolute bottom-4 left-0 right-0 text-center">
             <p className="font-mono text-[10px] text-gray-500 uppercase tracking-widest">
-                ANALYZING {activePersona.name} 'S RAGE LEVELS...
+                ANALYZING {activePersona.name}&apos;S RAGE LEVELS...
             </p>
         </div>
       </div>

@@ -64,8 +64,29 @@ export default function AdminPage() {
 
   // Process Analytics
   const totalPageViews = events.filter((e: any) => e.type === 'page_view').length;
-  const totalFakeDoorClicks = events.filter((e: any) => e.type === 'click_fake_door').length;
-  const avgTime = "N/A"; // Needs more complex logic (session start/end), skipping for simple MVP
+  const totalRoasts = events.filter((e: any) => e.type === 'roast_complete').length;
+
+  // Top 5 Personas
+  const personaCounts: Record<string, number> = {};
+  events.filter((e: any) => e.type === 'roast_complete').forEach((e: any) => {
+    const p = e.data?.persona || 'unknown';
+    personaCounts[p] = (personaCounts[p] || 0) + 1;
+  });
+  const topPersonas = Object.entries(personaCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5);
+
+  // Unique Users (Sessions) by Country
+  const countryUsers: Record<string, Set<string>> = {};
+  events.filter((e: any) => e.type === 'page_view').forEach((e: any) => {
+    const c = e.data?.country || 'Unknown';
+    const s = e.data?.sessionId || 'anon';
+    if (!countryUsers[c]) countryUsers[c] = new Set();
+    countryUsers[c].add(s);
+  });
+  const uniqueByCountry = Object.entries(countryUsers)
+    .map(([country, sessions]) => ({ country, count: sessions.size }))
+    .sort((a, b) => b.count - a.count);
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 font-mono">
@@ -80,9 +101,41 @@ export default function AdminPage() {
         {/* STATS CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
           <StatCard label="Active Users (Real-time)" value={activeUsers} color="bg-green-400" />
-          <StatCard label="Total Page Views" value={totalPageViews} color="bg-blue-300" />
+          <StatCard label="Total Roasts Sent" value={totalRoasts} color="bg-orange-400" />
           <StatCard label="Waitlist Signups" value={waitlist.length} color="bg-yellow-300" />
-          <StatCard label="Feedback Recvd" value={feedback.length} color="bg-purple-300" />
+          <StatCard label="Total Page Views" value={totalPageViews} color="bg-blue-300" />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+          
+          {/* TOP PERSONAS RANKING */}
+          <div className="bg-white border-2 border-black p-6 shadow-[4px_4px_0_0_#000]">
+            <h2 className="font-bold text-xl uppercase mb-4 border-b-2 border-black pb-2">Top 5 Personas 🏆</h2>
+            <div className="flex flex-col gap-2">
+              {topPersonas.map(([name, count], i) => (
+                <div key={i} className="flex justify-between items-center p-2 bg-gray-50 border border-black/10">
+                  <span className="font-bold uppercase text-sm">#{i+1} {name}</span>
+                  <span className="bg-black text-white px-2 py-0.5 text-xs font-bold">{count} roasts</span>
+                </div>
+              ))}
+              {topPersonas.length === 0 && <p className="opacity-50 text-center py-4">No roasts recorded yet</p>}
+            </div>
+          </div>
+
+          {/* USERS BY COUNTRY */}
+          <div className="bg-white border-2 border-black p-6 shadow-[4px_4px_0_0_#000]">
+            <h2 className="font-bold text-xl uppercase mb-4 border-b-2 border-black pb-2">Unique Users by Country 🌍</h2>
+            <div className="grid grid-cols-2 gap-4">
+              {uniqueByCountry.map((item, i) => (
+                <div key={i} className="flex justify-between border-b pb-1">
+                  <span className="font-bold text-xs uppercase">{item.country}</span>
+                  <span className="font-black text-xs">{item.count}</span>
+                </div>
+              ))}
+              {uniqueByCountry.length === 0 && <p className="col-span-2 opacity-50 text-center py-4">Waiting for data...</p>}
+            </div>
+          </div>
+
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -126,7 +179,7 @@ export default function AdminPage() {
                           <div className="text-xs mb-1"><strong>Req:</strong> {f.characterRequest}</div>
                        )}
                        {f.feedbackText && (
-                          <div className="text-xs italic opacity-80">"{f.feedbackText}"</div>
+                          <div className="text-xs italic opacity-80">&quot;{f.feedbackText}&quot;</div>
                        )}
                     </div>
                  ))}

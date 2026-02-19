@@ -42,14 +42,14 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 overflow-y-auto"
+        className="fixed inset-0 z-[100] flex flex-col items-center bg-black/90 backdrop-blur-sm p-4 py-8 overflow-y-auto"
         onClick={onClose}
       >
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="relative w-full max-w-lg bg-[#fffdf5] border-4 border-black shadow-[8px_8px_0_0_#000] p-6 md:p-8"
+          className="mt-auto mb-auto relative w-full max-w-lg bg-[#fffdf5] border-4 border-black shadow-[8px_8px_0_0_#000] p-6 md:p-8"
           onClick={(e) => e.stopPropagation()}
         >
           <button
@@ -116,7 +116,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                 {/* SECTION C: LOVE/HATE BOX */}
                 <div className="space-y-2">
                   <label className="block font-black uppercase text-sm border-b-2 border-black/10 pb-1">
-                    Your Email (Optional - We'll notify you on fix)
+                    Your Email (Optional - We&apos;ll notify you on fix)
                   </label>
                   <input
                     type="email"
@@ -137,8 +137,12 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                     onChange={(e) => setFeedbackText(e.target.value)}
                     placeholder="Your UI is ugly but the roasts are funny..."
                     rows={3}
+                    maxLength={500}
                     className="w-full p-3 border-2 border-black font-bold text-sm focus:outline-none focus:ring-4 focus:ring-[#5CE1E6]/50 bg-white resize-none"
                   />
+                  <p className={`text-right text-xs font-bold mt-1 ${
+                    feedbackText.length >= 480 ? "text-red-500" : "text-black/30"
+                  }`}>{feedbackText.length}/500</p>
                 </div>
 
                 <button

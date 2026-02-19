@@ -37,11 +37,13 @@ export default function Home() {
       }
     });
 
-    // 3. Analytics: Page View
-    fetch('/api/analytics', {
-       method: 'POST',
-       body: JSON.stringify({ type: 'page_view', data: { sessionId } })
-    }).catch(err => console.error("Analytics Error", err));
+    // 3. Analytics: Page View with Country
+    getUserCountry().then((country) => {
+      fetch('/api/analytics', {
+         method: 'POST',
+         body: JSON.stringify({ type: 'page_view', data: { sessionId, country: country || 'Unknown' } })
+      }).catch(err => console.error("Analytics Error", err));
+    });
 
     // 4. Analytics: Heartbeat (every 15s)
     const heartbeat = setInterval(() => {
@@ -61,7 +63,7 @@ export default function Home() {
       .catch(err => console.error("Failed to fetch stats", err));
 
     return () => clearInterval(heartbeat);
-  }, []); // sessionId is stable
+  }, [sessionId]); // sessionId is stable but needed for ESLint
 
   // Default to wolf for logic if nothing selected, but UI will show empty
   const selectedPersona = persona ? PERSONA_MAP[persona] : PERSONA_MAP.wolf;
@@ -100,6 +102,19 @@ export default function Home() {
       await new Promise(resolve => setTimeout(resolve, 8000)); 
 
       setResult(payload as RoastResultData);
+
+      // Analytics: Roast Complete
+      fetch('/api/analytics', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          type: 'roast_complete', 
+          data: { 
+            sessionId, 
+            persona: persona ?? "wolf",
+            mode 
+          } 
+        })
+      }).catch(err => console.error("Analytics Error", err));
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Unexpected roast engine failure.";
@@ -170,9 +185,9 @@ export default function Home() {
       </div>
 
       {/* DEVELOPER FOOTER */}
-      <footer className="mt-12 text-center opacity-60 hover:opacity-100 transition-opacity pb-8">
-        <p className="text-[10px] font-black uppercase tracking-widest">
-           CONTACT DEV: <a href="mailto:pitchx26@gmail.com" className="underline hover:text-red-600 decoration-2">pitchx26@gmail.com</a>
+      <footer className="mt-12 text-center pb-8">
+        <p className="text-[10px] font-black uppercase tracking-widest text-[#FF66C4]">
+           CONTACT DEV FOR ANY COLLABORATION 😇 O:) : <a href="mailto:pitchx26@gmail.com" className="underline hover:text-black decoration-2">pitchx26@gmail.com</a>
         </p>
       </footer>
 
