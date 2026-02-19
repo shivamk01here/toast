@@ -6,12 +6,13 @@ import PersonaSelector from "@/components/PersonaSelector";
 import RoastInput from "@/components/RoastInput";
 import FullScreenRoast from "@/components/FullScreenRoast";
 import { PERSONA_MAP } from "@/lib/personas";
-import { PersonaKey, RoastResultData } from "@/types/roast";
+import { PersonaKey, RoastResultData, RoastMode } from "@/types/roast";
 import { HEADER_SUBTITLES } from "@/lib/quotes";
 import { getUserCountry } from "@/lib/location";
 
 export default function Home() {
   const [persona, setPersona] = useState<PersonaKey | null>(null);
+  const [mode, setMode] = useState<RoastMode>("email");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +50,11 @@ export default function Home() {
       const response = await fetch("/api/roast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, persona: persona ?? "wolf" })
+        body: JSON.stringify({ 
+          email, 
+          persona: persona ?? "wolf",
+          mode 
+        })
       });
 
       const payload = await response.json();
@@ -61,7 +66,7 @@ export default function Home() {
       // But don't make it too long if the API took time.
       // For now, let's just let the natural API delay happen, plus a minimum visual delay handled by the user experience?
       // Actually, let's just wait a fixed amount to ensure they see the funny quotes.
-      await new Promise(resolve => setTimeout(resolve, 3500)); 
+      await new Promise(resolve => setTimeout(resolve, 8000)); 
 
       setResult(payload as RoastResultData);
     } catch (err) {
@@ -78,7 +83,7 @@ export default function Home() {
     <main className="min-h-screen w-full flex flex-col items-center overflow-x-hidden p-2 md:p-4 pb-20">
       
       {/* HEADER */}
-      <header className="w-full max-w-5xl flex justify-between items-end mb-4 md:mb-8 mt-2">
+      <header className="w-full max-w-[90%] lg:max-w-6xl flex justify-between items-end mb-4 md:mb-8 mt-2">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 md:gap-4">
              <Image
@@ -104,7 +109,7 @@ export default function Home() {
       </header>
 
       {/* COMPACT CONTENT CONTAINER */}
-      <div className="w-full max-w-4xl flex flex-col gap-6">
+      <div className="w-full max-w-[90%] lg:max-w-6xl flex flex-col gap-6">
         
         {/* 1. CHARACTER SELECTOR (Full Width) */}
         <div className="w-full">
@@ -115,9 +120,11 @@ export default function Home() {
         <div className="w-full shadow-[8px_8px_0_0_#000] border-2 border-black bg-white">
           <RoastInput
             value={email}
+            mode={mode}
             disabled={loading}
             selectedPersona={selectedPersona}
             onChange={setEmail}
+            onModeChange={setMode}
             onRoast={roastEmail}
           />
         </div>

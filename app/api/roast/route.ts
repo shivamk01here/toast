@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
   let selectedPersona: PersonaKey = "wolf";
 
   try {
-    const { email, persona = "wolf" } = (await req.json()) as RoastRequest;
+    const { email, persona = "wolf", mode = "email" } = (await req.json()) as RoastRequest & { mode?: "email" | "linkedin" | "resume" };
     const sanitizedEmail = email?.trim() ?? "";
     selectedPersona = PERSONA_MAP[persona] ? persona : "wolf";
 
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Email input is too weak or unreadable. Paste a real cold email with at least one coherent sentence."
+            "Input is too weak or unreadable. Paste a real pitch/post/resume with at least one coherent sentence."
         },
         { status: 400 }
       );
@@ -115,19 +115,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    let contextInstruction = "";
+    if (mode === "linkedin") {
+       contextInstruction = `Roast this LinkedIn 'About' section or Post. Mock the humble-brags, the corporate cringe, and the fake visionary tone. Rewrite it to be honest.`;
+    } else if (mode === "resume") {
+       contextInstruction = `Roast this Resume/CV summary or skills. Mock the buzzwords, the inflated titles, and the generic skills (e.g. 'Microsoft Word'). Rewrite it to be actually hireable.`;
+    } else {
+       contextInstruction = `Roast this Cold Email. Mock the desperation, the templates, and the lack of value. Rewrite it to be persuasive and concise.`;
+    }
+
     const prompt = `You are ${PERSONA_MAP[selectedPersona].systemPrompt}.
-Roast this cold email with sharp humor, then rewrite it to be persuasive and concise.
+${contextInstruction}
 Return JSON ONLY with exact shape:
 {
   "score": number (0-100),
   "roast": "brutal 2 sentence insult",
-  "fix": "rewritten email",
+  "fix": "rewritten version",
   "cringe_words": ["list", "of", "bad", "words"],
   "gif_keyword": "search term"
 }
 Do not wrap in markdown.
 
-Email:
+Input Text:
 ${sanitizedEmail}`;
 
     const modelText = await generateWithModelFallback(prompt, apiKey);

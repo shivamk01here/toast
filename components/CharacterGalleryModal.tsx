@@ -23,7 +23,8 @@ const CATEGORY_COLORS: Record<"all" | PersonaCategory, string> = {
   cringe: "#FF66C4",
   hollywood: "#FF914D",
   anime: "#FF66C4",
-  medieval: "#5CE1E6"
+  medieval: "#5CE1E6",
+  sigma: "#808080"
 };
 
 export default function CharacterGalleryModal({

@@ -9,6 +9,7 @@ import { toPng } from "html-to-image";
 import { PersonaConfig } from "@/lib/personas";
 import { RoastResultData } from "@/types/roast";
 import { LOADING_MESSAGES } from "@/lib/quotes";
+import CringeMeter from "./CringeMeter";
 
 interface FullScreenRoastProps {
   isOpen: boolean;
@@ -39,7 +40,7 @@ export default function FullScreenRoast({
       const interval = setInterval(() => {
         const randomMsg = LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)];
         setCurrentMessage(randomMsg);
-      }, 1500);
+      }, 2000);
 
       return () => clearInterval(interval);
     }
@@ -117,10 +118,10 @@ export default function FullScreenRoast({
             <div className="space-y-4">
               <motion.h2
                 key={currentMessage}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="font-heading text-3xl md:text-5xl font-black text-[#FFDE59] uppercase leading-tight drop-shadow-[2px_2px_0_#FF66C4]"
+                exit={{ opacity: 0, y: -10 }}
+                className="font-simple text-xl md:text-3xl font-bold text-[#FFDE59] uppercase leading-relaxed drop-shadow-[2px_2px_0_#FF66C4] max-w-2xl px-4"
               >
                 {currentMessage}
               </motion.h2>
@@ -135,79 +136,96 @@ export default function FullScreenRoast({
 
         {/* RESULT STATE */}
         {!loading && result && persona && (
-          <div className="w-full max-w-6xl flex flex-col items-center gap-8 py-12">
+          <div className="w-full max-w-6xl flex flex-col items-center gap-4 py-4 md:py-8 h-full justify-center">
             
             {/* Main Roast Card (To be screenshotted) */}
             <div
               ref={roastCardRef}
-              className="bg-white border-[4px] border-black p-8 md:p-10 shadow-[12px_12px_0_0_#FF914D] max-w-5xl w-full relative overflow-hidden"
+              className={`relative w-full max-w-5xl shrink-0 max-h-[85vh] flex flex-col overflow-hidden transition-all duration-500
+                ${persona.category === 'sigma' ? 'grayscale contrast-125 bg-neutral-900 border-white text-white' : 'bg-[#fffdf5] border-black text-black'}
+                border-[4px] shadow-[12px_12px_0_0_#000]
+              `}
             >
-              {/* Decorative Background Elements */}
-              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#FF66C4] via-[#FFDE59] to-[#5CE1E6]" />
-              <div className="absolute -right-12 -top-12 w-48 h-48 bg-[#FFDE59] rounded-full opacity-20 blur-3xl pointer-events-none" />
+              {/* TICKET HOLES DECORATION */}
+              <div className="absolute top-0 left-0 w-full h-4 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMTAiIGN5PSItNSIgcj0iOCIgZmlsbD0iIzFhMWExYSIvPjwvc3ZnPg==')] opacity-20" />
+              <div className="absolute bottom-0 left-0 w-full h-4 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMTAiIGN5PSIyNSIgcj0iOCIgZmlsbD0iIzFhMWExYSIvPjwvc3ZnPg==')] opacity-20" />
 
-              {/* Header: Persona + Verdict */}
-              <div className="flex flex-col md:flex-row items-center gap-6 mb-8 border-b-2 border-dashed border-gray-200 pb-8">
-                <div className="relative w-32 h-32 flex-shrink-0">
-                  <Image
+              {/* TICKET HEADER */}
+              <div className={`p-4 md:p-6 border-b-4 border-dashed ${persona.category === 'sigma' ? 'border-white/20' : 'border-black/20'} flex items-center gap-4 shrink-0`}>
+                <div className="relative w-20 h-20 md:w-28 md:h-28 shrink-0">
+                   <Image
                     src={persona.roastGif}
                     alt={persona.name}
                     fill
-                    className="object-cover rounded-full border-4 border-black shadow-[4px_4px_0_0_#000]"
+                    className={`object-cover rounded-md border-2 ${persona.category === 'sigma' ? 'border-white' : 'border-black'}`}
                     unoptimized
                   />
-                  <div className="absolute -bottom-2 -right-2 bg-black text-white px-3 py-1 font-heading text-xl md:text-2xl font-black uppercase rotate-[-3deg]">
-                    TRASH 🗑️
+                  {/* STAMP */}
+                  <div className="absolute -bottom-4 -right-4 w-24 h-12 flex items-center justify-center border-4 border-red-600 rounded opacity-80 rotate-[-15deg] bg-white/50 backdrop-blur-sm mix-blend-multiply">
+                    <span className="text-red-600 font-black text-xl uppercase tracking-widest">VIOLATION</span>
                   </div>
                 </div>
-                <div className="text-center md:text-left">
-                  <h3 className="font-heading text-4xl md:text-5xl font-black uppercase leading-[0.9] mb-2">
-                    {persona.name}
-                    <span className="block text-[#FF66C4] text-2xl md:text-3xl mt-1">
-                      Rated Your Pitch
-                    </span>
-                  </h3>
+
+                <div className="flex-1 min-w-0 flex flex-col">
+                  <div className="flex items-baseline justify-between mb-1">
+                    <h3 className={`font-mono text-xl md:text-3xl font-black uppercase tracking-tighter ${persona.category === 'sigma' ? 'text-white' : 'text-black'}`}>
+                      CITATION #{Math.floor(Math.random() * 99999)}
+                    </h3>
+                    <div className="hidden md:block">
+                      <CringeMeter score={result.score} />
+                    </div>
+                  </div>
+                  <div className={`font-mono text-xs md:text-sm uppercase ${persona.category === 'sigma' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    OFFICER: {persona.name}
+                  </div>
+                  <div className={`font-mono text-xs md:text-sm uppercase ${persona.category === 'sigma' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    DATE: {new Date().toLocaleDateString()}
+                  </div>
                 </div>
               </div>
 
-              {/* The Roast */}
-              <div className="mb-6">
-                <h4 className="font-mono text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
-                  THE VERDICT
-                </h4>
-                <p className="font-simple text-xl md:text-3xl font-bold leading-tight text-black mb-4">
-                  "{result.roast}"
-                </p>
-              </div>
-
-               {/* The Fix */}
-               <div className="bg-[#f0f0f0] p-6 border-2 border-black relative">
-                <div className="absolute -top-3 left-4 bg-black text-white px-2 py-0.5 font-mono text-xs font-bold uppercase">
-                  THE FIX
-                </div>
+              {/* CONTENT AREA */}
+              <div className="flex flex-col flex-1 min-h-0 p-4 md:p-6 gap-4 overflow-hidden">
                 
-                {/* Copy Button Positioned Here */}
-                <button 
-                  onClick={handleCopy}
-                  className="absolute top-2 right-2 text-xs font-bold uppercase flex items-center gap-1 bg-white border border-black px-2 py-1 hover:bg-gray-100 transition-colors z-10"
-                >
-                  {isCopying ? <Check size={14} /> : <Copy size={14} />}
-                  {isCopying ? "COPIED" : "COPY"}
-                </button>
+                {/* Mobile Meter */}
+                <div className="md:hidden self-center">
+                   <CringeMeter score={result.score} />
+                </div>
 
-                <p className="font-simple text-base md:text-lg leading-relaxed text-gray-800 whitespace-pre-wrap mt-2">
-                  {result.fix}
-                </p>
+                {/* OFFENSE (The Roast) */}
+                <div className="shrink-0 flex flex-col gap-1">
+                  <span className={`font-mono text-[10px] font-bold uppercase tracking-widest ${persona.category === 'sigma' ? 'text-gray-500' : 'text-gray-400'}`}>
+                    OFFENSE DETAILS
+                  </span>
+                  <p className={`font-mono text-sm md:text-xl lg:text-2xl font-bold leading-tight ${persona.category === 'sigma' ? 'text-white' : 'text-black'} line-clamp-4 md:line-clamp-none`}>
+                    "{result.roast}"
+                  </p>
+                </div>
+
+                {/* PENALTY (The Fix) */}
+                <div className={`relative flex-1 min-h-[120px] border-2 ${persona.category === 'sigma' ? 'border-white/20 bg-white/5' : 'border-black/10 bg-black/5'} p-4 overflow-y-auto`}>
+                  <div className={`absolute top-0 left-0 px-2 py-1 text-[10px] font-bold uppercase tracking-widest ${persona.category === 'sigma' ? 'bg-white text-black' : 'bg-black text-white'}`}>
+                    CORRECTIVE ACTION
+                  </div>
+                  
+                  <button 
+                    onClick={handleCopy}
+                    className={`absolute top-2 right-2 text-[10px] uppercase font-bold flex items-center gap-1 px-2 py-1 hover:bg-black/10 transition-colors ${persona.category === 'sigma' ? 'text-white border-white' : 'text-black border-black'} border`}
+                  >
+                    {isCopying ? <Check size={12} /> : <Copy size={12} />}
+                    {isCopying ? "COPIED" : "COPY"}
+                  </button>
+
+                  <p className={`font-mono text-xs md:text-base leading-relaxed whitespace-pre-wrap mt-4 ${persona.category === 'sigma' ? 'text-gray-300' : 'text-gray-800'}`}>
+                    {result.fix}
+                  </p>
+                </div>
               </div>
 
-              {/* Footer */}
-              <div className="mt-8 pt-4 border-t-2 border-black flex justify-between items-center opacity-60">
-                <div className="font-heading font-black text-xl uppercase">
-                  PITCH<span className="text-[#FF914D]">SLAP</span>
-                </div>
-                <div className="font-mono text-xs">
-                  generated by AI (and pain)
-                </div>
+              {/* FOOTER */}
+              <div className={`p-2 border-t-2 border-dashed ${persona.category === 'sigma' ? 'border-white/20' : 'border-black/10'} flex justify-between items-center opacity-50 shrink-0`}>
+                <span className="font-mono text-[10px] uppercase">PITCHSLAP DEPARTMENT OF CORRECTIONS</span>
+                <span className="font-mono text-[10px] uppercase">FINE: $0.00 (YOUR DIGNITY)</span>
               </div>
             </div>
 

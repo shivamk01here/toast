@@ -102,6 +102,15 @@ const FALLBACK_ROASTS: Record<PersonaCategory | "default", RoastResultData[]> = 
       gif_keyword: "cringe"
     }
   ],
+  sigma: [
+    {
+      score: 100,
+      roast: "You are not a wolf. You are a sheep. A beta male would send this email. A Sigma would simply acquire the company.",
+      fix: "I don't ask for meetings. I grant audiences.\n\nBe ready at 3 AM.",
+      cringe_words: ["please", "kindly", "hope", "sorry"],
+      gif_keyword: "patrick bateman"
+    }
+  ],
   default: [
     {
       score: 15,

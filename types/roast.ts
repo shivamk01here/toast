@@ -36,7 +36,9 @@ export type PersonaKey =
   | "gandalf"
   | "geralt";
 
-export type PersonaCategory = "sales" | "tv" | "tech" | "cringe" | "desi" | "anime" | "medieval" | "hollywood";
+export type PersonaCategory = "sales" | "tv" | "tech" | "cringe" | "desi" | "anime" | "medieval" | "hollywood" | "sigma";
+
+export type RoastMode = "email" | "linkedin" | "resume";
 
 export interface RoastResultData {
   score: number;

@@ -21,7 +21,8 @@ const CATEGORY_LABELS: Record<"all" | PersonaCategory, string> = {
   cringe: "🤡 CRINGE",
   hollywood: "🎬 HOLLYWOOD",
   anime: "🎌 ANIME",
-  medieval: "⚔️ MEDIEVAL"
+  medieval: "⚔️ MEDIEVAL",
+  sigma: "🗿 SIGMA"
 };
 
 const CATEGORY_COLORS: Record<"all" | PersonaCategory, string> = {
@@ -33,7 +34,8 @@ const CATEGORY_COLORS: Record<"all" | PersonaCategory, string> = {
   cringe: "#FF66C4",
   hollywood: "#FF914D",
   anime: "#FF66C4",
-  medieval: "#5CE1E6"
+  medieval: "#5CE1E6",
+  sigma: "#808080" // Grayscale/Silver for Sigma
 };
 
 export default function PersonaSelector({ selected, onChange }: PersonaSelectorProps) {
@@ -79,7 +81,7 @@ export default function PersonaSelector({ selected, onChange }: PersonaSelectorP
       </div>
 
       <div className="mb-2 flex items-center gap-2">
-         <span className="font-heading text-lg md:text-xl uppercase font-black text-red-600 animate-pulse">
+         <span className="font-simple text-xl md:text-2xl font-bold uppercase text-red-600 animate-pulse tracking-tight">
             {sectionTitle}
          </span>
       </div>
@@ -121,7 +123,7 @@ export default function PersonaSelector({ selected, onChange }: PersonaSelectorP
 
         <button
           onClick={() => setGalleryOpen(true)}
-          className="neo-btn bg-[#FF66C4] text-black border-[3px] border-black w-24 flex flex-col items-center justify-center gap-1 shrink-0 group hover:bg-[#ff85d1] shadow-[4px_4px_0_0_#000]"
+          className="neo-btn bg-black text-white border-[3px] border-black w-24 flex flex-col items-center justify-center gap-1 shrink-0 group hover:bg-[#333] shadow-[4px_4px_0_0_#5CE1E6]"
         >
           <span className="text-3xl group-hover:rotate-12 transition-transform">🎪</span>
           <span className="text-[10px] font-black text-center leading-tight uppercase">VIEW<br />ALL</span>
