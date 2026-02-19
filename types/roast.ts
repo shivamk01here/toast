@@ -43,6 +43,7 @@ export type RoastMode = "email" | "linkedin" | "resume";
 export interface RoastResultData {
   score: number;
   roast: string;
+  tip: string;
   fix: string;
   cringe_words: string[];
   gif_keyword: string;

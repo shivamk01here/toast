@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, X, Copy, Check } from "lucide-react";
+import { Download, X, Copy, Check, Share2, MessageCircle } from "lucide-react";
 import Image from "next/image";
 // @ts-ignore
 import { toPng } from "html-to-image";
@@ -10,6 +10,7 @@ import { PersonaConfig } from "@/lib/personas";
 import { RoastResultData } from "@/types/roast";
 import { LOADING_MESSAGES } from "@/lib/quotes";
 import CringeMeter from "./CringeMeter";
+import FeedbackModal from "./FeedbackModal";
 
 interface FullScreenRoastProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ interface FullScreenRoastProps {
   persona: PersonaConfig | null;
   result: RoastResultData | null;
 }
+
+type TicketStyle = "default" | "jail" | "parking" | "receipt";
 
 export default function FullScreenRoast({
   isOpen,
@@ -30,23 +33,31 @@ export default function FullScreenRoast({
   const roastCardRef = useRef<HTMLDivElement>(null);
   const [isCopying, setIsCopying] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [ticketStyle, setTicketStyle] = useState<TicketStyle>("default");
+  const [showSharePreview, setShowSharePreview] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showFakeDoor, setShowFakeDoor] = useState(false);
+  const [emailWaitlist, setEmailWaitlist] = useState("");
+  const [waitlistSuccess, setWaitlistSuccess] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
-  // Handle Loading Messages
+  useEffect(() => {
+    if (result && isOpen) {
+      const styles: TicketStyle[] = ["default", "jail", "parking", "receipt"];
+      setTicketStyle(styles[Math.floor(Math.random() * styles.length)]);
+    }
+  }, [result, isOpen]);
+
   useEffect(() => {
     if (loading && persona) {
-      const initialMessage = persona.loadingMessage || LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)];
-      setCurrentMessage(initialMessage);
-
+      setCurrentMessage(persona.loadingMessage || LOADING_MESSAGES[0]);
       const interval = setInterval(() => {
-        const randomMsg = LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)];
-        setCurrentMessage(randomMsg);
+        setCurrentMessage(LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)]);
       }, 2000);
-
       return () => clearInterval(interval);
     }
   }, [loading, persona]);
 
-  // Handle Copy
   const handleCopy = async () => {
     if (!result) return;
     try {
@@ -58,22 +69,89 @@ export default function FullScreenRoast({
     }
   };
 
-  // Handle Download Image
-  const handleDownload = async () => {
-    if (!roastCardRef.current) return;
-    setIsDownloading(true);
+  const generateImage = async () => {
+    if (!roastCardRef.current) return null;
     try {
-      const dataUrl = await toPng(roastCardRef.current, { cacheBust: true });
+      await document.fonts.ready;
+      return await toPng(roastCardRef.current, { cacheBust: true, pixelRatio: 2 });
+    } catch (err) {
+      console.error("Image gen failed:", err);
+      return null;
+    }
+  };
+
+
+
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    const dataUrl = await generateImage();
+    if (dataUrl) {
       const link = document.createElement("a");
       link.download = `pitchslap-roast-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
-    } catch (err) {
-      console.error("Failed to generate image:", err);
-    } finally {
-      setIsDownloading(false);
+    }
+    setIsDownloading(false);
+  };
+
+  const handleShareClick = async () => {
+    setIsDownloading(true);
+    const dataUrl = await generateImage();
+    if (dataUrl) {
+      setPreviewImage(dataUrl);
+      setShowSharePreview(true);
+    }
+    setIsDownloading(false);
+  };
+
+
+
+  const getStyles = () => {
+    switch (ticketStyle) {
+      case "jail":
+        return {
+          bg: "bg-[#FF914D]",
+          border: "border-black",
+          text: "text-black",
+          headerBg: "bg-black",
+          headerText: "text-white",
+          font: "font-mono",
+          label: "DEPT. OF CORRECTIONS",
+        };
+      case "parking":
+        return {
+          bg: "bg-white",
+          border: "border-red-600",
+          text: "text-red-900",
+          headerBg: "bg-red-600",
+          headerText: "text-white",
+          font: "font-sans",
+          label: "VIOLATION NOTICE",
+        };
+      case "receipt":
+        return {
+          bg: "bg-white",
+          border: "border-gray-300",
+          text: "text-gray-800",
+          headerBg: "bg-gray-100",
+          headerText: "text-gray-800",
+          font: "font-mono",
+          label: "TRANSACTION FAILED",
+        };
+      default:
+        return {
+          bg: "bg-[#fffdf5]",
+          border: "border-black",
+          text: "text-black",
+          headerBg: "bg-black",
+          headerText: "text-white",
+          font: "font-mono",
+          label: `CITATION #${Math.floor(Math.random() * 9999 + 1000)}`,
+        };
     }
   };
+
+  const st = getStyles();
 
   if (!isOpen) return null;
 
@@ -83,177 +161,361 @@ export default function FullScreenRoast({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md p-4 overflow-y-auto"
+        className="fixed inset-0 z-50 bg-black/95 overflow-y-auto"
       >
-        {/* Close Button (Only show when checking result, not loading) */}
+        {/* CLOSE BTN */}
         {!loading && (
           <button
             onClick={onClose}
-            className="absolute top-6 right-6 z-50 p-2 text-white/50 hover:text-white transition-colors"
+            className="fixed top-4 right-4 z-[60] w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
           >
-            <X size={32} />
+            <X size={22} />
           </button>
         )}
 
-        {/* LOADING STATE */}
+        {/* ── LOADING ──────────────────────────────────── */}
         {loading && persona && (
-          <div className="flex flex-col items-center justify-center text-center max-w-4xl w-full space-y-8">
+          <div className="min-h-screen flex flex-col items-center justify-center text-center px-4 gap-8">
             <motion.div
-              animate={{
-                scale: [1, 1.05, 1],
-                rotate: [0, 1, -1, 0],
-              }}
+              animate={{ scale: [1, 1.05, 1], rotate: [0, 1, -1, 0] }}
               transition={{ repeat: Infinity, duration: 2 }}
-              className="relative w-48 h-48 md:w-64 md:h-64 rounded-full border-4 border-[#FFDE59] overflow-hidden shadow-[0_0_50px_rgba(255,222,89,0.5)]"
+              className="relative w-48 h-48 rounded-full border-4 border-[#FFDE59] overflow-hidden shadow-[0_0_50px_rgba(255,222,89,0.4)]"
             >
-              <Image
-                src={persona.roastGif}
-                alt="Loading..."
-                fill
-                className="object-cover"
-                unoptimized
-              />
+              <Image src={persona.roastGif} alt="Loading" fill className="object-cover" unoptimized />
             </motion.div>
-            
-            <div className="space-y-4">
-              <motion.h2
-                key={currentMessage}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="font-simple text-xl md:text-3xl font-bold text-[#FFDE59] uppercase leading-relaxed drop-shadow-[2px_2px_0_#FF66C4] max-w-2xl px-4"
-              >
-                {currentMessage}
-              </motion.h2>
+            <div className="space-y-4 max-w-xl">
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={currentMessage}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  className="text-xl md:text-3xl font-black text-[#FFDE59] uppercase leading-tight"
+                >
+                  {currentMessage}
+                </motion.p>
+              </AnimatePresence>
               <div className="flex justify-center gap-2">
-                <span className="w-3 h-3 bg-[#5CE1E6] animate-bounce delay-0"></span>
-                <span className="w-3 h-3 bg-[#5CE1E6] animate-bounce delay-150"></span>
-                <span className="w-3 h-3 bg-[#5CE1E6] animate-bounce delay-300"></span>
+                {[0, 150, 300].map((d) => (
+                  <span
+                    key={d}
+                    className="w-3 h-3 bg-[#5CE1E6] rounded-full animate-bounce"
+                    style={{ animationDelay: `${d}ms` }}
+                  />
+                ))}
               </div>
             </div>
           </div>
         )}
 
-        {/* RESULT STATE */}
+        {/* ── RESULT ──────────────────────────────────── */}
         {!loading && result && persona && (
-          <div className="w-full max-w-6xl flex flex-col items-center gap-4 py-4 md:py-8 h-full justify-center">
-            
-            {/* Main Roast Card (To be screenshotted) */}
-            <div
-              ref={roastCardRef}
-              className={`relative w-full max-w-5xl shrink-0 max-h-[85vh] flex flex-col overflow-hidden transition-all duration-500
-                ${persona.category === 'sigma' ? 'grayscale contrast-125 bg-neutral-900 border-white text-white' : 'bg-[#fffdf5] border-black text-black'}
-                border-[4px] shadow-[12px_12px_0_0_#000]
-              `}
-            >
-              {/* TICKET HOLES DECORATION */}
-              <div className="absolute top-0 left-0 w-full h-4 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMTAiIGN5PSItNSIgcj0iOCIgZmlsbD0iIzFhMWExYSIvPjwvc3ZnPg==')] opacity-20" />
-              <div className="absolute bottom-0 left-0 w-full h-4 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMTAiIGN5PSIyNSIgcj0iOCIgZmlsbD0iIzFhMWExYSIvPjwvc3ZnPg==')] opacity-20" />
+          <div className="min-h-screen flex items-start justify-center py-12 px-4">
+            {/* Outer wrapper — side by side on lg, stacked on mobile */}
+            <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-6 items-start">
 
-              {/* TICKET HEADER */}
-              <div className={`p-4 md:p-6 border-b-4 border-dashed ${persona.category === 'sigma' ? 'border-white/20' : 'border-black/20'} flex items-center gap-4 shrink-0`}>
-                <div className="relative w-20 h-20 md:w-28 md:h-28 shrink-0">
-                   <Image
-                    src={persona.roastGif}
-                    alt={persona.name}
-                    fill
-                    className={`object-cover rounded-md border-2 ${persona.category === 'sigma' ? 'border-white' : 'border-black'}`}
-                    unoptimized
-                  />
-                  {/* STAMP */}
-                  <div className="absolute -bottom-4 -right-4 w-24 h-12 flex items-center justify-center border-4 border-red-600 rounded opacity-80 rotate-[-15deg] bg-white/50 backdrop-blur-sm mix-blend-multiply">
-                    <span className="text-red-600 font-black text-xl uppercase tracking-widest">VIOLATION</span>
-                  </div>
-                </div>
+              {/* ── LEFT: TICKET CARD ── */}
+              <div className="flex-1 min-w-0 flex flex-col items-center gap-4">
+                <div
+                  ref={roastCardRef}
+                  className={`w-full max-w-2xl ${st.bg} ${st.text} ${st.font} border-4 ${st.border} shadow-[8px_8px_0_0_rgba(0,0,0,0.8)]`}
+                >
+                  {/* Ticket header */}
+                  <div className={`${st.headerBg} ${st.headerText} p-4 flex items-center gap-4`}>
+                    {/* Avatar */}
+                    <div className="relative w-16 h-16 shrink-0">
+                      <Image
+                        src={persona.roastGif}
+                        alt={persona.name}
+                        fill
+                        className="object-cover rounded border-2 border-white/30"
+                        unoptimized
+                      />
+                      <div className="absolute -bottom-2 -right-2 bg-red-600 text-white text-[9px] font-black px-1 py-0.5 rotate-[-12deg] border border-white/50">
+                        FAIL
+                      </div>
+                    </div>
 
-                <div className="flex-1 min-w-0 flex flex-col">
-                  <div className="flex items-baseline justify-between mb-1">
-                    <h3 className={`font-mono text-xl md:text-3xl font-black uppercase tracking-tighter ${persona.category === 'sigma' ? 'text-white' : 'text-black'}`}>
-                      CITATION #{Math.floor(Math.random() * 99999)}
-                    </h3>
-                    <div className="hidden md:block">
-                      <CringeMeter score={result.score} />
+                    {/* Title + meta */}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-black uppercase text-base md:text-xl leading-tight truncate">
+                        {st.label}
+                      </div>
+                      <div className="text-[11px] opacity-70 uppercase mt-0.5">
+                        {persona.name} &bull; {new Date().toLocaleDateString()}
+                      </div>
+                    </div>
+
+                    {/* Score pill */}
+                    <div className="shrink-0 flex flex-col items-center bg-red-600 text-white px-3 py-2 border-2 border-white/30 shadow-md">
+                      <span className="font-black text-3xl leading-none">{result.score}</span>
+                      <span className="text-[9px] font-bold uppercase opacity-80">trash score</span>
                     </div>
                   </div>
-                  <div className={`font-mono text-xs md:text-sm uppercase ${persona.category === 'sigma' ? 'text-gray-400' : 'text-gray-500'}`}>
-                    OFFICER: {persona.name}
+
+                  {/* Body */}
+                  <div className="p-5 flex flex-col gap-5">
+                    {/* Roast — direct, no label, character voice */}
+                    <div className="border-l-4 border-red-500 pl-4">
+                      <p className="text-base md:text-xl font-bold leading-relaxed italic">
+                        &ldquo;{result.roast}&rdquo;
+                      </p>
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mt-2">
+                        — {persona.name}
+                      </p>
+                    </div>
+
+                    <div className="border-t-2 border-dashed border-current/20" />
+
+                    {/* Tip — character voiced callout */}
+                    {result.tip && (
+                      <div className="bg-black/5 border border-current/20 rounded px-4 py-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">💡 The real problem</p>
+                        <p className="text-sm font-bold leading-relaxed">{result.tip}</p>
+                      </div>
+                    )}
+
+                    <div className="border-t-2 border-dashed border-current/20" />
+
+                    {/* Fix — full professional rewrite */}
+                    <div className="relative">
+                      <span className="text-[10px] font-black uppercase tracking-widest opacity-50 block mb-2">
+                        ✅ Fixed Version
+                      </span>
+                      <button
+                        onClick={handleCopy}
+                        className="absolute top-0 right-0 flex items-center gap-1 text-[10px] font-bold uppercase border border-current/30 px-2 py-1 hover:bg-black/10 transition-colors rounded"
+                      >
+                        {isCopying ? <Check size={11} /> : <Copy size={11} />}
+                        {isCopying ? "Copied" : "Copy"}
+                      </button>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap pr-16">
+                        {result.fix}
+                      </p>
+                    </div>
+
+                    {/* Fake door banner */}
+                    <button
+                      onClick={() => setShowFakeDoor(true)}
+                      className="w-full py-2.5 text-white font-bold text-xs uppercase tracking-wider bg-gradient-to-r from-[#FF0080] to-[#7928CA] hover:opacity-90 transition-opacity animate-pulse"
+                    >
+                      😩 Tired of copy-pasting? Get the Chrome Extension →
+                    </button>
                   </div>
-                  <div className={`font-mono text-xs md:text-sm uppercase ${persona.category === 'sigma' ? 'text-gray-400' : 'text-gray-500'}`}>
-                    DATE: {new Date().toLocaleDateString()}
+
+                  {/* Footer */}
+                  <div className="border-t-2 border-dashed border-current/20 px-5 py-3 flex flex-col sm:flex-row justify-between gap-1 opacity-60 text-[10px] uppercase font-bold">
+                    <span>Made with 😭 by a dev who sends bad emails.</span>
+                    <span>Not affiliated with your therapist.</span>
                   </div>
                 </div>
+
+                {/* Under-card link */}
+                <button
+                  onClick={() => setShowFeedback(true)}
+                  className="text-white/50 hover:text-white text-xs font-bold uppercase underline underline-offset-4 transition-colors"
+                >
+                  Missing your fav character? Request them here.
+                </button>
               </div>
 
-              {/* CONTENT AREA */}
-              <div className="flex flex-col flex-1 min-h-0 p-4 md:p-6 gap-4 overflow-hidden">
-                
-                {/* Mobile Meter */}
-                <div className="md:hidden self-center">
-                   <CringeMeter score={result.score} />
+              {/* ── RIGHT: ACTIONS PANEL ── */}
+              <div className="w-full lg:w-72 shrink-0 flex flex-col gap-3 lg:sticky lg:top-12">
+
+                {/* Cringe Meter Panel */}
+                <div className="bg-white border-4 border-black shadow-[6px_6px_0_0_#000] p-4">
+                  <h3 className="font-black text-sm uppercase mb-2 opacity-60">Vibe Check</h3>
+                  <CringeMeter score={result.score} />
+                  {/* Cringe Words */}
+                  {result.cringe_words && result.cringe_words.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1.5">Cringe Evidence 🚨</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {result.cringe_words.map((word, i) => (
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 bg-[#FFDE59] text-black text-[11px] font-black border-2 border-black uppercase"
+                          >
+                            {word}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* OFFENSE (The Roast) */}
-                <div className="shrink-0 flex flex-col gap-1">
-                  <span className={`font-mono text-[10px] font-bold uppercase tracking-widest ${persona.category === 'sigma' ? 'text-gray-500' : 'text-gray-400'}`}>
-                    OFFENSE DETAILS
-                  </span>
-                  <p className={`font-mono text-sm md:text-xl lg:text-2xl font-bold leading-tight ${persona.category === 'sigma' ? 'text-white' : 'text-black'} line-clamp-4 md:line-clamp-none`}>
-                    "{result.roast}"
-                  </p>
-                </div>
+                <div className="bg-white border-4 border-black shadow-[6px_6px_0_0_#000] p-5">
+                  <h3 className="font-black text-xl uppercase mb-4 border-b-2 border-black pb-2">
+                    Actions
+                  </h3>
 
-                {/* PENALTY (The Fix) */}
-                <div className={`relative flex-1 min-h-[120px] border-2 ${persona.category === 'sigma' ? 'border-white/20 bg-white/5' : 'border-black/10 bg-black/5'} p-4 overflow-y-auto`}>
-                  <div className={`absolute top-0 left-0 px-2 py-1 text-[10px] font-bold uppercase tracking-widest ${persona.category === 'sigma' ? 'bg-white text-black' : 'bg-black text-white'}`}>
-                    CORRECTIVE ACTION
-                  </div>
-                  
-                  <button 
-                    onClick={handleCopy}
-                    className={`absolute top-2 right-2 text-[10px] uppercase font-bold flex items-center gap-1 px-2 py-1 hover:bg-black/10 transition-colors ${persona.category === 'sigma' ? 'text-white border-white' : 'text-black border-black'} border`}
+                  {/* Download */}
+                  <button
+                    onClick={handleDownload}
+                    disabled={isDownloading}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-[#FF914D] text-black font-bold uppercase text-xs border-2 border-black mb-3 hover:bg-[#e8802e] transition-colors disabled:opacity-60"
                   >
-                    {isCopying ? <Check size={12} /> : <Copy size={12} />}
-                    {isCopying ? "COPIED" : "COPY"}
+                    <span>Download Receipt</span>
+                    {isDownloading ? (
+                      <span className="animate-spin text-base">⏳</span>
+                    ) : (
+                      <Download size={15} />
+                    )}
                   </button>
 
-                  <p className={`font-mono text-xs md:text-base leading-relaxed whitespace-pre-wrap mt-4 ${persona.category === 'sigma' ? 'text-gray-300' : 'text-gray-800'}`}>
-                    {result.fix}
-                  </p>
+                  {/* Share Preview */}
+                  <button
+                    onClick={handleShareClick}
+                    disabled={isDownloading}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-[#5CE1E6] text-black font-bold uppercase text-xs border-2 border-black mb-3 hover:bg-[#43cdd2] transition-colors disabled:opacity-60"
+                  >
+                    <span>Expose Yourself 📸</span>
+                    <Share2 size={15} />
+                  </button>
+
+                  {/* Roast another */}
+                  <button
+                    onClick={onClose}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-white text-black font-bold uppercase text-xs border-2 border-black hover:bg-gray-100 transition-colors"
+                  >
+                    <span>Roast Another</span>
+                    <MessageCircle size={15} />
+                  </button>
                 </div>
-              </div>
 
-              {/* FOOTER */}
-              <div className={`p-2 border-t-2 border-dashed ${persona.category === 'sigma' ? 'border-white/20' : 'border-black/10'} flex justify-between items-center opacity-50 shrink-0`}>
-                <span className="font-mono text-[10px] uppercase">PITCHSLAP DEPARTMENT OF CORRECTIONS</span>
-                <span className="font-mono text-[10px] uppercase">FINE: $0.00 (YOUR DIGNITY)</span>
+
+
               </div>
             </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap justify-center gap-4">
-
-              <button
-                onClick={handleDownload}
-                className="flex items-center gap-2 px-6 py-4 bg-[#FF914D] text-black font-black uppercase tracking-wider border-2 border-black hover:bg-[#ff7b29] transition-transform hover:-translate-y-1 active:translate-y-0 shadow-[4px_4px_0_0_#000]"
-              >
-                {isDownloading ? (
-                  <span className="animate-spin">⏳</span>
-                ) : (
-                  <Download size={20} />
-                )}
-                Share Shame
-              </button>
-              
-              <button
-                onClick={onClose}
-                className="px-6 py-4 bg-white text-black font-bold uppercase tracking-wider border-2 border-black hover:bg-gray-100 transition-transform hover:-translate-y-1 shadow-[4px_4px_0_0_#000]"
-              >
-                Start Over
-              </button>
-            </div>
-
           </div>
         )}
+
+        {/* ── SHARE PREVIEW MODAL ───────────────────────── */}
+        {showSharePreview && previewImage && (
+          <div
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            onClick={() => setShowSharePreview(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-[#fffdf5] border-4 border-black p-5 w-full max-w-md shadow-[8px_8px_0_0_#000] relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setShowSharePreview(false)}
+                className="absolute -top-4 -right-4 w-9 h-9 bg-black text-white rounded-full flex items-center justify-center border-2 border-white hover:scale-110 transition-transform"
+              >
+                <X size={18} />
+              </button>
+
+              <h3 className="font-black text-2xl uppercase mb-4 text-center">Share My Trauma</h3>
+
+              <div className="relative w-full aspect-[3/4] mb-4 bg-gray-200 border-2 border-black overflow-hidden rounded">
+                <Image src={previewImage} alt="Roast Preview" fill className="object-contain p-2" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(
+                    `I got roasted by PitchSlap! Score: ${result?.score}/100. "${result?.roast.substring(0, 60)}..." ${typeof window !== "undefined" ? window.location.href : ""}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 bg-[#25D366] text-white py-3 font-bold text-sm border-2 border-black hover:-translate-y-0.5 transition-transform"
+                >
+                  WhatsApp
+                </a>
+                <a
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                    `I just got destroyed by PitchSlap! 💀 Score: ${result?.score}/100\n"${result?.roast.substring(0, 80)}..."\n${typeof window !== "undefined" ? window.location.href : ""}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 bg-black text-white py-3 font-bold text-sm border-2 border-black hover:-translate-y-0.5 transition-transform"
+                >
+                  X / Twitter
+                </a>
+                <button
+                  onClick={handleDownload}
+                  className="col-span-2 flex items-center justify-center gap-2 bg-[#FFDE59] text-black py-3 font-bold text-sm border-2 border-black hover:-translate-y-0.5 transition-transform uppercase"
+                >
+                  <Download size={17} /> Download Image
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* ── FAKE DOOR MODAL ──────────────────────────── */}
+        {showFakeDoor && (
+          <div
+            className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
+            onClick={() => setShowFakeDoor(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-[#5CE1E6] border-4 border-black p-6 md:p-8 w-full max-w-md shadow-[12px_12px_0_0_#fff] relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setShowFakeDoor(false)}
+                className="absolute -top-4 -right-4 w-9 h-9 bg-black text-white rounded-full flex items-center justify-center border-2 border-white hover:scale-110 transition-transform"
+              >
+                <X size={18} />
+              </button>
+
+              {!waitlistSuccess ? (
+                <>
+                  <h3 className="font-heading font-black text-3xl uppercase mb-2 leading-none">
+                    You caught us early! 🫣
+                  </h3>
+                  <p className="font-bold text-lg mb-6 leading-snug">
+                    The Extension drops next week.{" "}
+                    <span className="bg-black text-white px-1">480 people</span> are already in.
+                  </p>
+                  <form onSubmit={(e) => { e.preventDefault(); setWaitlistSuccess(true); }} className="flex flex-col gap-4">
+                    <input
+                      type="email"
+                      required
+                      placeholder="Enter email to get 50% off"
+                      value={emailWaitlist}
+                      onChange={(e) => setEmailWaitlist(e.target.value)}
+                      className="w-full p-4 border-2 border-black font-bold focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      className="w-full py-4 bg-black text-white font-black uppercase tracking-wider hover:bg-gray-800 transition-colors"
+                    >
+                      Join Waitlist
+                    </button>
+                  </form>
+                  <p className="text-xs font-bold mt-4 opacity-60 text-center">
+                    We won&apos;t spam you. We&apos;re too lazy.
+                  </p>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-6xl mb-4">🎉</div>
+                  <h3 className="font-heading font-black text-2xl uppercase mb-2">
+                    You&apos;re on the list!
+                  </h3>
+                  <p className="font-bold mb-8">We&apos;ll roast your inbox soon.</p>
+                  <button
+                    onClick={() => setShowFakeDoor(false)}
+                    className="px-6 py-2 border-2 border-black font-bold uppercase hover:bg-white transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+
+        {/* ── FEEDBACK MODAL ──────────────────────────── */}
+        <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} />
       </motion.div>
     </AnimatePresence>
   );

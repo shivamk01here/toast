@@ -71,7 +71,11 @@ export const ROAST_BUTTON_QUOTES = {
 };
 
 export const LOADING_MESSAGES = [
-  // Physical Disgust
+  // Viral / Mean
+  "Reading your garbage...",
+  "Consulting with HR...",
+  "Holding back vomit...",
+  "Calculating Cringe Levels...",
   "Sanitizing my database after reading this...",
   "Applying eye bleach... please wait...",
   "Gagging... (holding it together)...",

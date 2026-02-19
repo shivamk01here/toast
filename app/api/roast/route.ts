@@ -37,6 +37,7 @@ function parseModelJson(text: string): RoastResultData | null {
     return {
       score: Math.max(0, Math.min(100, Math.round(parsed.score))),
       roast: parsed.roast.trim(),
+      tip: typeof parsed.tip === "string" ? parsed.tip.trim() : "",
       fix: parsed.fix.trim(),
       cringe_words: parsed.cringe_words
         .map((item) => String(item).trim())
@@ -66,7 +67,7 @@ async function generateWithModelFallback(prompt: string, apiKey: string) {
       const response = await model.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 1,
+          temperature: 1.0 + Math.random() * 0.4,
           responseMimeType: "application/json"
         }
       });
@@ -124,20 +125,45 @@ export async function POST(req: NextRequest) {
        contextInstruction = `Roast this Cold Email. Mock the desperation, the templates, and the lack of value. Rewrite it to be persuasive and concise.`;
     }
 
-    const prompt = `You are ${PERSONA_MAP[selectedPersona].systemPrompt}.
-${contextInstruction}
-Return JSON ONLY with exact shape:
-{
-  "score": number (0-100),
-  "roast": "brutal 2 sentence insult",
-  "fix": "rewritten version",
-  "cringe_words": ["list", "of", "bad", "words"],
-  "gif_keyword": "search term"
-}
-Do not wrap in markdown.
+    const prompt = `SYSTEM ROLE: You are ${PERSONA_MAP[selectedPersona].systemPrompt}
 
-Input Text:
-${sanitizedEmail}`;
+===
+USER SUBMITTED TEXT:
+${sanitizedEmail}
+===
+
+${contextInstruction}
+
+Now produce a JSON response. Follow these rules EXACTLY for each field:
+
+1. "score" — Integer 0 to 100. How bad is this text? 0 = absolute trash, 100 = perfect.
+
+2. "roast" — 3 to 5 sentences IN CHARACTER. Quote or reference something SPECIFIC from their actual text and tear it apart in your authentic voice. If you are a Desi character (HOD, Babu Bhaiya, Ashneer, etc.): write in raw, aggressive Hinglish. Do NOT be polite. No softening.
+
+3. "tip" — 1 to 2 sentences IN CHARACTER. If you have any character-clichés like "Raju ne sikhaya hai" or "Yeh doglapan hai", put them HERE. Name the single worst thing about their text in your character voice.
+
+4. "fix" — ⚠️ CRITICAL: ZERO CHARACTER VOICE IN THIS FIELD. ⚠️
+Write a COMPLETE, FULL professional English rewrite of their ENTIRE submitted text.
+Rules for fix:
+- NO character voice, NO slang, NO Hinglish, NO humor, NO character names.
+- Rewrite the FULL content — do not summarize, do not give a one-liner.
+- It must be a ready-to-send, high-quality, professional English version of their text.
+- Be direct, concise, and persuasive.
+
+5. "cringe_words" — Array of up to 8 actual words/phrases copied verbatim from their text that were the worst.
+
+6. "gif_keyword" — 2-3 word GIF search term matching the emotional reaction.
+
+Return RAW JSON ONLY. No markdown. No explanation.
+
+{
+  "score": <integer>,
+  "roast": "<character voice roast>",
+  "tip": "<character voice tip>",
+  "fix": "<full professional English rewrite>",
+  "cringe_words": ["<word1>", "<word2>"],
+  "gif_keyword": "<keyword>"
+}`;
 
     const modelText = await generateWithModelFallback(prompt, apiKey);
     const parsed = parseModelJson(modelText);
@@ -149,16 +175,16 @@ ${sanitizedEmail}`;
     }
 
     return NextResponse.json(parsed);
-    return NextResponse.json(parsed);
-  } catch (error) {
-    console.error("Roast API failure, switching to fallback", error);
-
-    // FALLBACK MECHANISM
-    // If anything fails (Gemini 429, 500, network, parsing), we return a local roast
-    // so the user ALWAYS gets a result.
-    const fallback = getFallbackRoast(selectedPersona);
+  } catch (error: any) {
+    console.error("CRITICAL ROAST API FAILURE:", error);
     
-    // Return 200 OK because from the frontend perspective, it succeeded
-    return NextResponse.json(fallback);
+    // Explicitly returning an error instead of fallback to allow troubleshooting
+    return NextResponse.json(
+      { 
+        error: "Roast failed. Error logged to server console.",
+        details: error?.message || "Unknown server error"
+      },
+      { status: 500 }
+    );
   }
 }

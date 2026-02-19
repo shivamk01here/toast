@@ -123,7 +123,7 @@ export default function PersonaSelector({ selected, onChange }: PersonaSelectorP
 
         <button
           onClick={() => setGalleryOpen(true)}
-          className="neo-btn bg-black text-white border-[3px] border-black w-24 flex flex-col items-center justify-center gap-1 shrink-0 group hover:bg-[#333] shadow-[4px_4px_0_0_#5CE1E6]"
+          className="neo-btn bg-[#FF914D] text-black border-[3px] border-black w-24 flex flex-col items-center justify-center gap-1 shrink-0 group hover:bg-[#FF8030] shadow-[4px_4px_0_0_#000]"
         >
           <span className="text-3xl group-hover:rotate-12 transition-transform">🎪</span>
           <span className="text-[10px] font-black text-center leading-tight uppercase">VIEW<br />ALL</span>
