@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PERSONA_MAP } from "@/lib/personas";
 import { PersonaKey, RoastResultData } from "@/types/roast";
 import { getFallbackRoast } from "@/lib/roast_fallback";
-import { checkAndIncrementRateLimit, getRateLimitStatus } from "@/lib/storage";
+import { checkAndIncrementRateLimitAsync, getRateLimitStatusAsync } from "@/lib/storage";
 import { sendTelegramNotification } from "@/lib/telegram";
 
 export const runtime = "nodejs";
@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     || req.headers.get('x-real-ip')
     || '127.0.0.1';
-  const status = getRateLimitStatus(ip);
+  const status = await getRateLimitStatusAsync(ip);
   return NextResponse.json({ remaining: status.remaining, limit: 3 });
 }
 
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
     || '127.0.0.1';
 
   // Check rate limit
-  const rateLimit = checkAndIncrementRateLimit(ip);
+  const rateLimit = await checkAndIncrementRateLimitAsync(ip);
   if (!rateLimit.allowed) {
     await sendTelegramNotification(
       `⚠️ <b>RATE LIMIT HIT</b>\nIP: \`${ip}\` exhausted free roasts.`
