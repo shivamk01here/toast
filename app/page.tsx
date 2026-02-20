@@ -193,7 +193,7 @@ export default function Home() {
 
             <div className="space-y-4">
               <p>
-              You paste that <span className="bg-white px-1">"hope this finds you well"</span> garbage you&apos;re about to send.
+              You paste that <span className="bg-white px-1">&quot;hope this finds you well&quot;</span> garbage you&apos;re about to send.
               </p>
               <p>
               We take your boring draft, ruthlessly roast the desperation out of it, and hand you back a version that actually converts.
