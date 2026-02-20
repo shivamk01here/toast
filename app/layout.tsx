@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import { Space_Mono, Syne, Inter } from "next/font/google";
+import { Space_Mono, Syne, Inter, Permanent_Marker, Bebas_Neue } from "next/font/google";
+
 import "./globals.css";
+import Script from "next/script";
 
 const heading = Syne({
   subsets: ["latin"],
@@ -20,6 +22,20 @@ const simple = Inter({
   weight: ["400", "500", "600", "700"]
 });
 
+const marker = Permanent_Marker({
+
+  subsets: ["latin"],
+  variable: "--font-marker",
+  weight: ["400"]
+});
+
+const industrial = Bebas_Neue({
+  subsets: ["latin"],
+  variable: "--font-industrial",
+  weight: ["400"]
+});
+
+
 export const metadata: Metadata = {
   title: "PitchSlap",
   description: "AI roast engine for cold emails.",
@@ -28,6 +44,8 @@ export const metadata: Metadata = {
   },
 };
 
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID || "G-SDPPJ99H53";
+
 export default function RootLayout({
   children
 }: Readonly<{
@@ -35,9 +53,25 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${heading.variable} ${body.variable} ${simple.variable} font-body antialiased`}>
+      <head>
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_ID}');
+          `}
+        </Script>
+      </head>
+      <body className={`${heading.variable} ${body.variable} ${simple.variable} ${marker.variable} ${industrial.variable} font-body antialiased`}>
+
         {children}
       </body>
     </html>
   );
 }
+

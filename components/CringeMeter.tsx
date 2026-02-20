@@ -23,7 +23,8 @@ export default function CringeMeter({ score }: CringeMeterProps) {
   const isFire = score < 20;
 
   return (
-    <div className="relative w-48 h-24 sm:w-64 sm:h-32 flex justify-center items-end overflow-hidden mb-4 scale-90 sm:scale-100 origin-bottom">
+    <div className="relative w-full max-w-[200px] aspect-[2/1] mx-auto flex justify-center items-end overflow-hidden mb-4 scale-100 origin-bottom">
+
       {/* Gauge Background */}
       <div className="absolute bottom-0 w-full h-full bg-[#e0e0e0] rounded-t-full border-4 border-black border-b-0 overflow-hidden shadow-inner">
         {/* Gradient: Green (Left/Based) -> Yellow -> Red (Right/Cringe) */}

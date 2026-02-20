@@ -9,14 +9,21 @@ export async function POST(req: NextRequest) {
 
     saveFeedback(body);
 
+    const isWaitlist = body.type === 'waitlist';
+    
     // Send Telegram Notification (Fire & Forget)
-    const message = `📝 <b>New Feedback Received</b>\n\n` +
-      `🎭 <b>Vibe Check:</b> ${vibe || 'N/A'}\n` +
-      `🦸 <b>Character Request:</b> ${characterRequest || 'N/A'}\n` +
-      `💬 <b>Feedback:</b> ${feedbackText || 'N/A'}\n` +
-      `📧 <b>Email:</b> ${email || 'Anonymous'}`;
+    const message = isWaitlist 
+      ? `🔥 <b>New Waitlist Signup</b>\n\n` +
+        `📧 <b>Email:</b> ${email || 'Anonymous'}\n` +
+        `🌍 <b>Type:</b> Quota Exceeded`
+      : `📝 <b>New Feedback Received</b>\n\n` +
+        `🎭 <b>Vibe Check:</b> ${vibe || 'N/A'}\n` +
+        `🦸 <b>Character Request:</b> ${characterRequest || 'N/A'}\n` +
+        `💬 <b>Feedback:</b> ${feedbackText || 'N/A'}\n` +
+        `📧 <b>Email:</b> ${email || 'Anonymous'}`;
       
     sendTelegramNotification(message);
+
 
     return NextResponse.json({ success: true });
   } catch (error) {

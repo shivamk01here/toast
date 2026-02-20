@@ -3,8 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { PERSONA_MAP } from "@/lib/personas";
 import { PersonaKey, RoastResultData } from "@/types/roast";
 import { getFallbackRoast } from "@/lib/roast_fallback";
+import { checkAndIncrementRateLimit, getRateLimitStatus } from "@/lib/storage";
+import { sendTelegramNotification } from "@/lib/telegram";
 
 export const runtime = "nodejs";
+
 
 interface RoastRequest {
   email?: string;
@@ -90,8 +93,34 @@ async function generateWithModelFallback(prompt: string, apiKey: string) {
   throw unavailableError;
 }
 
+export async function GET(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || req.headers.get('x-real-ip')
+    || '127.0.0.1';
+  const status = getRateLimitStatus(ip);
+  return NextResponse.json({ remaining: status.remaining, limit: 3 });
+}
+
 export async function POST(req: NextRequest) {
   let selectedPersona: PersonaKey = "wolf";
+
+  // Extract IP
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || req.headers.get('x-real-ip')
+    || '127.0.0.1';
+
+  // Check rate limit
+  const rateLimit = checkAndIncrementRateLimit(ip);
+  if (!rateLimit.allowed) {
+    await sendTelegramNotification(
+      `⚠️ <b>RATE LIMIT HIT</b>\nIP: \`${ip}\` exhausted free roasts.`
+    );
+    return NextResponse.json(
+      { error: "RATE_LIMIT_EXCEEDED", message: "You've used all 3 free roasts for today. Come back in 24 hours or get the extension for unlimited roasts!" },
+      { status: 429 }
+    );
+  }
+
 
   try {
     const { email, persona = "wolf", mode = "email" } = (await req.json()) as RoastRequest & { mode?: "email" | "linkedin" | "resume" };
@@ -110,11 +139,15 @@ export async function POST(req: NextRequest) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
+      await sendTelegramNotification(
+        `💀 <b>CRITICAL FAILURE</b>\nGEMINI_API_KEY is missing on server!`
+      );
       return NextResponse.json(
         { error: "Missing GEMINI_API_KEY on server." },
         { status: 500 }
       );
     }
+
 
     let contextInstruction = "";
     if (mode === "linkedin") {
@@ -178,6 +211,10 @@ Return RAW JSON ONLY. No markdown. No explanation.
   } catch (error: any) {
     console.error("CRITICAL ROAST API FAILURE:", error);
     
+    await sendTelegramNotification(
+      `🚨 <b>ROAST API FAILED</b>\nError: ${error?.message || "Unknown error"}\nDetails: ${JSON.stringify(error).substring(0, 200)}`
+    );
+
     // Explicitly returning an error instead of fallback to allow troubleshooting
     return NextResponse.json(
       { 
@@ -187,4 +224,5 @@ Return RAW JSON ONLY. No markdown. No explanation.
       { status: 500 }
     );
   }
+
 }

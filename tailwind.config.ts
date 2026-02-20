@@ -18,7 +18,10 @@ const config: Config = {
       fontFamily: {
         heading: ["var(--font-heading)", "sans-serif"],
         body: ["var(--font-body)", "sans-serif"],
-        simple: ["var(--font-simple)", "sans-serif"]
+        simple: ["var(--font-simple)", "sans-serif"],
+        marker: ["var(--font-marker)", "cursive"],
+        industrial: ["var(--font-industrial)", "sans-serif"]
+
       }
     }
   },

@@ -6,6 +6,8 @@ import PersonaSelector from "@/components/PersonaSelector";
 import RoastInput from "@/components/RoastInput";
 import FullScreenRoast from "@/components/FullScreenRoast";
 import FeedbackModal from "@/components/FeedbackModal";
+import WaitlistModal from "@/components/WaitlistModal";
+
 import { PERSONA_MAP } from "@/lib/personas";
 import { PersonaKey, RoastResultData, RoastMode } from "@/types/roast";
 import { HEADER_SUBTITLES } from "@/lib/quotes";
@@ -20,11 +22,15 @@ export default function Home() {
   const [result, setResult] = useState<RoastResultData | null>(null);
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showWaitlist, setShowWaitlist] = useState(false);
   const [headerSubtitle, setHeaderSubtitle] = useState(HEADER_SUBTITLES[0]);
+
   const [victimCount, setVictimCount] = useState(2500);
 
   // Analytics: Session ID (random string stored in memory for this session)
   const [sessionId] = useState(() => Math.random().toString(36).substring(7));
+  const [rateLimitReached, setRateLimitReached] = useState(false);
+  const [roastsRemaining, setRoastsRemaining] = useState<number | null>(null);
 
   useEffect(() => {
     // 1. Randomize header subtitle
@@ -36,6 +42,12 @@ export default function Home() {
         setPersona('ashneer');
       }
     });
+
+    // Check rate limit status on page load
+    fetch('/api/roast').then(r => r.json()).then(data => {
+      setRoastsRemaining(data.remaining ?? 3);
+      if ((data.remaining ?? 3) === 0) setRateLimitReached(true);
+    }).catch(() => {});
 
     // 3. Analytics: Page View with Country
     getUserCountry().then((country) => {
@@ -62,8 +74,16 @@ export default function Home() {
       })
       .catch(err => console.error("Failed to fetch stats", err));
 
-    return () => clearInterval(heartbeat);
+    // 6. Listen for waitlist trigger from components
+    const handleOpenWaitlist = () => setShowWaitlist(true);
+    document.addEventListener('openWaitlist', handleOpenWaitlist);
+
+    return () => {
+      clearInterval(heartbeat);
+      document.removeEventListener('openWaitlist', handleOpenWaitlist);
+    };
   }, [sessionId]); // sessionId is stable but needed for ESLint
+
 
   // Default to wolf for logic if nothing selected, but UI will show empty
   const selectedPersona = persona ? PERSONA_MAP[persona] : PERSONA_MAP.wolf;
@@ -91,6 +111,13 @@ export default function Home() {
       });
 
       const payload = await response.json();
+      if (response.status === 429) {
+        setRateLimitReached(true);
+        setRoastsRemaining(0);
+        setShowWaitlist(true);
+        throw new Error("RATE_LIMIT_EXCEEDED");
+      }
+
       if (!response.ok) {
         throw new Error(payload.error ?? "Roast failed.");
       }
@@ -118,7 +145,9 @@ export default function Home() {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Unexpected roast engine failure.";
-      setError(message);
+      if (message !== "RATE_LIMIT_EXCEEDED") {
+        setError(message);
+      }
       setShowFullScreen(false); // Close if error
     } finally {
       setLoading(false);
@@ -154,6 +183,33 @@ export default function Home() {
         </div>
       </header>
 
+      {/* WHAT IS PITCHSLAP? */}
+      <section className="w-full max-w-[95%] lg:max-w-6xl mb-8">
+        <div className="neo-box bg-[#FF66C4] p-6 border-2 border-black shadow-[4px_4px_0_0_#000]">
+          <h2 className="font-heading text-2xl md:text-3xl font-black uppercase mb-4">
+            What is PitchSlap?
+          </h2>
+          <div className="font-simple font-bold text-sm md:text-base space-y-4 leading-relaxed">
+
+            <div className="space-y-4">
+              <p>
+              You paste that <span className="bg-white px-1">"hope this finds you well"</span> garbage you&apos;re about to send.
+              </p>
+              <p>
+              We take your boring draft, ruthlessly roast the desperation out of it, and hand you back a version that actually converts.
+              </p>
+              <p>
+              You send the fixed version and actually get a reply.
+              </p>
+            </div>
+            <p className="border-t-2 border-black pt-4 mt-4 uppercase tracking-wider">
+              Consider it aggressive consulting for people who prefer making money over sounding polite.
+            </p>
+          </div>
+        </div>
+      </section>
+
+
       {/* COMPACT CONTENT CONTAINER */}
       <div className="w-full max-w-[95%] lg:max-w-6xl flex flex-col gap-6">
         
@@ -164,6 +220,12 @@ export default function Home() {
 
         {/* 2. INPUT AREA (Full Width, Centered) */}
         <div className="w-full shadow-[8px_8px_0_0_#000] border-2 border-black bg-white">
+          {roastsRemaining !== null && !rateLimitReached && (
+            <div className="px-4 pt-2 pb-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-right">
+              🔥 {roastsRemaining} free roast{roastsRemaining !== 1 ? 's' : ''} remaining today
+            </div>
+
+          )}
           <RoastInput
             value={email}
             mode={mode}
@@ -172,6 +234,7 @@ export default function Home() {
             onChange={setEmail}
             onModeChange={setMode}
             onRoast={roastEmail}
+            rateLimitReached={rateLimitReached}
           />
         </div>
         
@@ -206,7 +269,11 @@ export default function Home() {
         </button>
       )}
 
+      {/* WAITLIST MODAL */}
+      <WaitlistModal isOpen={showWaitlist} onClose={() => setShowWaitlist(false)} />
+
       {/* FULL SCREEN EXPERIENCE */}
+
       <FullScreenRoast
         isOpen={showFullScreen}
         loading={loading}

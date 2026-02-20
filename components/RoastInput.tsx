@@ -14,9 +14,10 @@ interface RoastInputProps {
   onChange: (value: string) => void;
   onModeChange: (mode: RoastMode) => void;
   onRoast: () => void;
+  rateLimitReached?: boolean;
 }
 
-export default function RoastInput({ value, mode, disabled, selectedPersona, onChange, onModeChange, onRoast }: RoastInputProps) {
+export default function RoastInput({ value, mode, disabled, selectedPersona, onChange, onModeChange, onRoast, rateLimitReached }: RoastInputProps) {
   const [buttonText, setButtonText] = useState("ROAST ME");
 
   useEffect(() => {
@@ -93,20 +94,31 @@ export default function RoastInput({ value, mode, disabled, selectedPersona, onC
         className="flex-1 w-full p-5 resize-none outline-none font-mono text-sm bg-white text-black placeholder:text-gray-400 focus:bg-[#FFF9E5] transition-colors"
       />
 
-      <motion.button
-        onClick={onRoast}
-        disabled={disabled}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        animate={{ 
-          x: [0, -2, 2, -2, 2, 0],
-          transition: { repeat: Infinity, duration: 0.5, repeatDelay: 3 } 
-        }}
-        className="w-full py-5 bg-[#FF914D] border-t-[3px] border-black font-black text-xl uppercase tracking-widest flex items-center justify-center gap-2 group text-white transition-colors hover:bg-[#ff7b29]"
-      >
-        <span>🔥 {buttonText}</span>
-        <span className="group-hover:translate-x-1 transition-transform">→</span>
-      </motion.button>
+      {rateLimitReached ? (
+        <button
+          onClick={() => document.dispatchEvent(new CustomEvent('openWaitlist'))}
+          className="w-full py-5 bg-[#FFDE59] border-t-[3px] border-black font-black text-base uppercase tracking-widest flex items-center justify-center gap-2 text-red-600 hover:bg-yellow-300 transition-colors cursor-pointer"
+        >
+          <span>🚫 Daily Limit Hit! Join Waitlist for</span>
+          <span className="underline">Unlimited Roasts →</span>
+        </button>
+      ) : (
+
+        <motion.button
+          onClick={onRoast}
+          disabled={disabled}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          animate={{ 
+            x: [0, -2, 2, -2, 2, 0],
+            transition: { repeat: Infinity, duration: 0.5, repeatDelay: 3 } 
+          }}
+          className="w-full py-5 bg-[#FF914D] border-t-[3px] border-black font-black text-xl uppercase tracking-widest flex items-center justify-center gap-2 group text-white transition-colors hover:bg-[#ff7b29]"
+        >
+          <span>🔥 {buttonText}</span>
+          <span className="group-hover:translate-x-1 transition-transform">→</span>
+        </motion.button>
+      )}
     </div>
   );
 }

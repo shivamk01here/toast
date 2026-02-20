@@ -77,6 +77,8 @@ export default function AdminPage() {
     .slice(0, 5);
 
   // Unique Users (Sessions) by Country
+  // We look at 'page_view' events for historical data, BUT also merge with 'activeUsers' if needed?
+  // Actually, historical data is best for overall stats.
   const countryUsers: Record<string, Set<string>> = {};
   events.filter((e: any) => e.type === 'page_view').forEach((e: any) => {
     const c = e.data?.country || 'Unknown';
@@ -87,6 +89,7 @@ export default function AdminPage() {
   const uniqueByCountry = Object.entries(countryUsers)
     .map(([country, sessions]) => ({ country, count: sessions.size }))
     .sort((a, b) => b.count - a.count);
+
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 font-mono">

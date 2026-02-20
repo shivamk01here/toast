@@ -69,6 +69,7 @@ export default function FullScreenRoast({
     }
   };
 
+
   const generateImage = async () => {
     if (!roastCardRef.current) return null;
     try {
@@ -161,17 +162,39 @@ export default function FullScreenRoast({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/95 overflow-y-auto"
+        className="fixed inset-0 z-50 bg-black/95 overflow-y-auto overflow-x-hidden"
       >
+
+        {/* TOP BAR MOUNTED ON MOBILE */}
+        {!loading && result && (
+            <div className="lg:hidden sticky top-0 z-[60] w-full bg-black p-2 flex justify-between items-center border-b-2 border-white/20">
+               <button
+                  onClick={handleCopy}
+                  className="flex-1 mr-2 py-3 bg-[#FFDE59] text-black font-black uppercase text-xs tracking-wider border-2 border-white flex justify-center items-center gap-2 shadow-[2px_2px_0_0_#fff] active:translate-y-[1px] active:shadow-none"
+               >
+                 {isCopying ? <Check size={16} /> : <Copy size={16} />}
+                 {isCopying ? "COPIED TO DASHBOARD" : "COPY FIXED VERSION"}
+               </button>
+               <button
+                onClick={onClose}
+                className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded text-white transition-colors border-2 border-transparent"
+              >
+                <X size={24} />
+              </button>
+            </div>
+        )}
+
         {/* CLOSE BTN */}
+        {/* CLOSE BTN DESKTOP */}
         {!loading && (
           <button
             onClick={onClose}
-            className="fixed top-4 right-4 z-[60] w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+            className="hidden lg:flex fixed top-4 right-4 z-[60] w-10 h-10 items-center justify-center bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
           >
             <X size={22} />
           </button>
         )}
+
 
         {/* ── LOADING ──────────────────────────────────── */}
         {loading && persona && (
@@ -210,15 +233,21 @@ export default function FullScreenRoast({
 
         {/* ── RESULT ──────────────────────────────────── */}
         {!loading && result && persona && (
-          <div className="min-h-screen flex items-start justify-center py-12 px-4">
+          <div className="min-h-screen flex items-start justify-center py-4 lg:py-12 px-4 lg:px-4 pb-20">
+
             {/* Outer wrapper — side by side on lg, stacked on mobile */}
+            {/* Outer wrapper — side by side on lg, STACKED on mobile (Roast -> Cringe -> Actions) */}
             <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-6 items-start">
+
+
 
               {/* ── LEFT: TICKET CARD ── */}
               <div className="flex-1 min-w-0 flex flex-col items-center gap-4">
                 <div
                   ref={roastCardRef}
-                  className={`w-full max-w-2xl ${st.bg} ${st.text} ${st.font} border-4 ${st.border} shadow-[8px_8px_0_0_rgba(0,0,0,0.8)]`}
+                  className={`w-full md:w-auto max-w-[calc(100vw-2.5rem)] md:max-w-2xl ${st.bg} ${st.text} font-marker tracking-wide border-4 ${st.border} shadow-[6px_6px_0_0_rgba(0,0,0,0.8)] md:shadow-[8px_8px_0_0_rgba(0,0,0,0.8)] mx-auto`}
+
+
                 >
                   {/* Ticket header */}
                   <div className={`${st.headerBg} ${st.headerText} p-4 flex items-center gap-4`}>
@@ -257,9 +286,10 @@ export default function FullScreenRoast({
                   <div className="p-5 flex flex-col gap-5 bg-white text-black">
                     {/* Roast — direct, no label, character voice */}
                     <div className="border-l-4 border-red-500 pl-4">
-                      <p className="text-base md:text-xl font-bold leading-relaxed italic">
+                      <p className="text-xl md:text-2xl font-marker leading-relaxed">
                         &ldquo;{result.roast}&rdquo;
                       </p>
+
                       <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mt-2">
                         — {persona.name}
                       </p>
@@ -271,7 +301,8 @@ export default function FullScreenRoast({
                     {result.tip && (
                       <div className="bg-black/5 border border-current/20 rounded px-4 py-3">
                         <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">💡 The real problem</p>
-                        <p className="text-sm font-bold leading-relaxed">{result.tip}</p>
+                        <p className="text-base font-marker leading-relaxed">{result.tip}</p>
+
                       </div>
                     )}
 
@@ -289,9 +320,10 @@ export default function FullScreenRoast({
                         {isCopying ? <Check size={11} /> : <Copy size={11} />}
                         {isCopying ? "Copied!" : "Copy"}
                       </button>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap pr-16">
+                      <p className="text-sm font-simple leading-relaxed whitespace-pre-wrap pr-16 text-gray-800">
                         {result.fix}
                       </p>
+
                     </div>
 
                     {/* Fake door banner */}
@@ -306,8 +338,16 @@ export default function FullScreenRoast({
                   {/* Footer */}
                   <div className="border-t-2 border-dashed border-current/20 px-5 py-3 flex flex-col sm:flex-row justify-between gap-1 opacity-60 text-[10px] uppercase font-bold bg-white">
                     <span>Made with 😭 by a dev who sends bad emails.</span>
-                    <span className="text-blue-600 underline">pitchslap.netlify.app</span>
+                    <a 
+                      href="https://pitchslap.netlify.app" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline hover:text-blue-800"
+                    >
+                      pitchslap.netlify.app
+                    </a>
                   </div>
+
                 </div>
 
                 {/* Under-card link */}
@@ -323,8 +363,10 @@ export default function FullScreenRoast({
               <div className="w-full lg:w-72 shrink-0 flex flex-col gap-3 lg:sticky lg:top-12">
 
                 {/* Cringe Meter Panel */}
+                {/* Cringe Meter Panel - MOVED UP and styled INDUSTRIAL */}
                 <div className="bg-white border-4 border-black shadow-[6px_6px_0_0_#000] p-4">
-                  <h3 className="font-black text-sm uppercase mb-2 opacity-60">Vibe Check</h3>
+                  <h3 className="font-industrial text-2xl tracking-widest uppercase mb-2 opacity-60">Vibe Check</h3>
+
                   <CringeMeter score={result.score} />
                   {/* Cringe Words */}
                   {result.cringe_words && result.cringe_words.length > 0 && (
@@ -345,9 +387,10 @@ export default function FullScreenRoast({
                 </div>
 
                 <div className="bg-white border-4 border-black shadow-[6px_6px_0_0_#000] p-5">
-                  <h3 className="font-black text-xl uppercase mb-4 border-b-2 border-black pb-2">
+                  <h3 className="font-industrial text-3xl tracking-wide uppercase mb-4 border-b-2 border-black pb-2">
                     Actions
                   </h3>
+
 
                   {/* Download */}
                   <button

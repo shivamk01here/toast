@@ -58,41 +58,145 @@ export function getFeedback() {
 }
 
 // --- Analytics ---
-// For "Real-time", we'll track "heartbeats". 
-// A heartbeat is just a timestamped update from a client.
-// We clean up heartbeats older than 1 minute to get "active users".
+// Separated into two files:
+// 1. analytics.json -> Historical events (page_view, roast_complete, etc.) - NO HEARTBEATS
+// 2. active_users.json -> Transient state for real-time users (cleaned up every request)
+
+const ACTIVE_USERS_FILE = path.join(DATA_DIR, 'active_users.json');
+
+// Helper to read active users with correct typing
+function readActiveUsers(): any[] {
+  return readJSON(ACTIVE_USERS_FILE) || [];
+}
 
 interface AnalyticsEvent {
-  type: string; // 'page_view', 'click_extension', 'click_waitlist', 'heartbeat'
+  type: string;
   data?: any;
   timestamp: string;
 }
 
 export function saveAnalyticsEvent(type: string, data?: any) {
+  // 1. Handle Heartbeat (Real-time only)
+  if (type === 'heartbeat') {
+    updateActiveUser(data);
+    return;
+  }
+
+  // 2. Handle Historical Events (Audit Log)
   const current = readJSON(ANALYTICS_FILE);
+  
+  // Optional: Prevent massive file growth by capping events (e.g. last 10k)
+  if (current.length > 10000) {
+    current.splice(0, current.length - 10000); // Keep last 10k
+  }
+
   current.push({ type, data, timestamp: new Date().toISOString() });
   writeJSON(ANALYTICS_FILE, current);
+}
+
+function updateActiveUser(data: any) {
+  const sessionId = data?.sessionId;
+  if (!sessionId) return;
+
+  const now = Date.now();
+  let users = readActiveUsers();
+  
+  // Remove users inactive for > 2 minutes
+  users = users.filter((u: any) => now - (u.lastSeen || 0) < 2 * 60 * 1000);
+
+  // Update or Add current user
+  const existingIndex = users.findIndex((u: any) => u.sessionId === sessionId);
+  if (existingIndex >= 0) {
+    users[existingIndex].lastSeen = now;
+    users[existingIndex].timestamp = new Date().toISOString();
+    if (data.country) users[existingIndex].country = data.country; // Update country if provided
+  } else {
+    users.push({
+      sessionId,
+      timestamp: new Date().toISOString(),
+      country: data.country || 'Unknown',
+      lastSeen: now
+    });
+  }
+
+  writeJSON(ACTIVE_USERS_FILE, users);
 }
 
 export function getAnalyticsData() {
   const events = readJSON(ANALYTICS_FILE);
   
-  // Calculate Active Users (heartbeats in last 60 seconds)
-  const now = new Date();
-  const oneMinuteAgo = new Date(now.getTime() - 60000);
+  // Get real-time active users from the dedicated file
+  // Filter one last time to be sure (in case no writes happened recently)
+  const now = Date.now();
+  const activeUsersList = readActiveUsers().filter((u: any) => now - (u.lastSeen || 0) < 2 * 60 * 1000);
   
-  const activeUsers = events.filter((e: AnalyticsEvent) => {
-    return e.type === 'heartbeat' && new Date(e.timestamp) > oneMinuteAgo;
-  });
-
-  // Unique active users could be roughly tracked by a session ID if we had one,
-  // but for now, we'll just count raw heartbeats / 4 (since we send every 15s) 
-  // or just distinct logic if we pass a random session ID.
-  // For simplicity: unique session IDs in heartbeats.
-  const uniqueActive = new Set(activeUsers.map((e: any) => e.data?.sessionId)).size;
-
   return {
     events,
-    activeUsers: uniqueActive || 0
+    activeUsers: activeUsersList.length,
+    activeUsersList // Optional: pass full list if admin needs to see who is online
   };
+}
+
+
+// --- Rate Limiting ---
+const RATE_LIMIT_FILE = path.join(DATA_DIR, 'rate_limits.json');
+const RATE_LIMIT_MAX = 3;
+const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+interface RateLimitEntry {
+  ip: string;
+  timestamps: string[];
+}
+
+function readRateLimits(): RateLimitEntry[] {
+  if (!fs.existsSync(RATE_LIMIT_FILE)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(RATE_LIMIT_FILE, 'utf-8'));
+  } catch {
+    return [];
+  }
+}
+
+function writeRateLimits(data: RateLimitEntry[]) {
+  try {
+    fs.writeFileSync(RATE_LIMIT_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('Error writing rate limits:', error);
+  }
+}
+
+export function checkAndIncrementRateLimit(ip: string): { allowed: boolean; remaining: number } {
+  const now = Date.now();
+  const cutoff = new Date(now - RATE_LIMIT_WINDOW_MS).toISOString();
+
+  const all = readRateLimits();
+  const entry = all.find(e => e.ip === ip) || { ip, timestamps: [] };
+
+  // Filter out timestamps older than 24 hours
+  entry.timestamps = entry.timestamps.filter(ts => ts > cutoff);
+
+  if (entry.timestamps.length >= RATE_LIMIT_MAX) {
+    return { allowed: false, remaining: 0 };
+  }
+
+  // Record this usage
+  entry.timestamps.push(new Date(now).toISOString());
+
+  const updated = all.filter(e => e.ip !== ip);
+  updated.push(entry);
+  writeRateLimits(updated);
+
+  return { allowed: true, remaining: RATE_LIMIT_MAX - entry.timestamps.length };
+}
+
+export function getRateLimitStatus(ip: string): { remaining: number } {
+  const now = Date.now();
+  const cutoff = new Date(now - RATE_LIMIT_WINDOW_MS).toISOString();
+
+  const all = readRateLimits();
+  const entry = all.find(e => e.ip === ip);
+  if (!entry) return { remaining: RATE_LIMIT_MAX };
+
+  const recent = entry.timestamps.filter(ts => ts > cutoff);
+  return { remaining: Math.max(0, RATE_LIMIT_MAX - recent.length) };
 }
