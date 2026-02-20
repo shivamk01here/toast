@@ -7,6 +7,7 @@ import { checkAndIncrementRateLimitAsync, getRateLimitStatusAsync } from "@/lib/
 import { sendTelegramNotification } from "@/lib/telegram";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 
 interface RoastRequest {
@@ -207,7 +208,7 @@ Return RAW JSON ONLY. No markdown. No explanation.
       );
     }
 
-    return NextResponse.json(parsed);
+    return NextResponse.json({ ...parsed, remaining: rateLimit.remaining });
   } catch (error: any) {
     console.error("CRITICAL ROAST API FAILURE:", error);
     

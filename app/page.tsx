@@ -44,7 +44,7 @@ export default function Home() {
     });
 
     // Check rate limit status on page load
-    fetch('/api/roast').then(r => r.json()).then(data => {
+    fetch(`/api/roast?t=${Date.now()}`).then(r => r.json()).then(data => {
       setRoastsRemaining(data.remaining ?? 3);
       if ((data.remaining ?? 3) === 0) setRateLimitReached(true);
     }).catch(() => {});
@@ -129,6 +129,12 @@ export default function Home() {
       await new Promise(resolve => setTimeout(resolve, 8000)); 
 
       setResult(payload as RoastResultData);
+
+      if (payload.remaining !== undefined) {
+        setRoastsRemaining(payload.remaining);
+      } else {
+        setRoastsRemaining(prev => prev !== null ? Math.max(0, prev - 1) : null);
+      }
 
       // Analytics: Roast Complete
       fetch('/api/analytics', {
