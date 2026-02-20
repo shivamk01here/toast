@@ -47,6 +47,9 @@ interface StorageAdapter {
 
   getRateLimits(): Promise<RateLimitEntry[]>;
   saveRateLimits(data: RateLimitEntry[]): Promise<void>;
+
+  getWhitelistedIPs(): Promise<string[]>;
+  saveWhitelistedIPs(ips: string[]): Promise<void>;
 }
 
 // --- 1. In-Memory Adapter (Fallback / Serverless without Redis) ---
@@ -56,6 +59,10 @@ class InMemoryAdapter implements StorageAdapter {
   private analytics: AnalyticsEvent[] = [];
   private activeUsers: ActiveUser[] = [];
   private rateLimits: RateLimitEntry[] = [];
+  private whitelistedIPs: string[] = [];
+
+  async getWhitelistedIPs() { return this.whitelistedIPs; }
+  async saveWhitelistedIPs(ips: string[]) { this.whitelistedIPs = ips; }
 
   async getWaitlist() { return this.waitlist; }
   async saveWaitlistEmail(email: string) {
@@ -101,7 +108,8 @@ class FileSystemAdapter implements StorageAdapter {
       feedback: path.join(this.dataDir, 'feedback.json'),
       analytics: path.join(this.dataDir, 'analytics.json'),
       activeUsers: path.join(this.dataDir, 'active_users.json'),
-      rateLimits: path.join(this.dataDir, 'rate_limits.json')
+      rateLimits: path.join(this.dataDir, 'rate_limits.json'),
+      whitelistedIPs: path.join(this.dataDir, 'whitelisted_ips.json')
     };
   }
 
@@ -152,23 +160,117 @@ class FileSystemAdapter implements StorageAdapter {
 
   async getRateLimits() { return this.read<RateLimitEntry>('rateLimits'); }
   async saveRateLimits(data: RateLimitEntry[]) { this.write('rateLimits', data); }
+
+  async getWhitelistedIPs() { return this.read<string>('whitelistedIPs'); }
+  async saveWhitelistedIPs(ips: string[]) { this.write('whitelistedIPs', ips); }
 }
 
 // --- 3. Redis Adapter (Upstash - Optional) ---
-// Note: Can be implemented later if user provides keys.
-// For now, we fallback to InMemory if not local.
+class RedisAdapter implements StorageAdapter {
+  private url: string;
+  private token: string;
+
+  constructor(url: string, token: string) {
+    this.url = url;
+    this.token = token;
+  }
+
+  private async fetchRedis(command: string, ...args: any[]) {
+    try {
+      const response = await fetch(`${this.url}/${command}/${args.join('/')}`, {
+        headers: { Authorization: `Bearer ${this.token}` },
+        // IMPORTANT: We do NOT want next.js to cache redis calls!
+        cache: 'no-store' 
+      });
+      if (!response.ok) {
+         console.error("Redis Error response:", await response.text());
+         return null;
+      }
+      const data = await response.json();
+      return data.result;
+    } catch (e) {
+      console.error("Redis Fetch Error", e);
+      return null;
+    }
+  }
+
+  async getWaitlist() { 
+    const res = await this.fetchRedis("get", "pitchslap_waitlist");
+    return res ? JSON.parse(res) : [];
+  }
+  async saveWaitlistEmail(email: string) {
+    const current = await this.getWaitlist();
+    if (!current.find((entry: any) => entry.email === email)) {
+      current.push({ email, timestamp: new Date().toISOString() });
+      await this.fetchRedis("set", "pitchslap_waitlist", JSON.stringify(current));
+    }
+  }
+
+  async getFeedback() {
+    const res = await this.fetchRedis("get", "pitchslap_feedback");
+    return res ? JSON.parse(res) : [];
+  }
+  async saveFeedback(data: any) {
+    const current = await this.getFeedback();
+    current.push({ ...data, timestamp: new Date().toISOString() });
+    await this.fetchRedis("set", "pitchslap_feedback", JSON.stringify(current));
+  }
+
+  async getAnalyticsEvents() {
+    const res = await this.fetchRedis("get", "pitchslap_analytics");
+    return res ? JSON.parse(res) : [];
+  }
+  async saveAnalyticsEvent(event: AnalyticsEvent) {
+    const current = await this.getAnalyticsEvents();
+    if (current.length > 10000) current.splice(0, current.length - 10000);
+    current.push(event);
+    await this.fetchRedis("set", "pitchslap_analytics", JSON.stringify(current));
+  }
+
+  async getActiveUsers() {
+    const res = await this.fetchRedis("get", "pitchslap_active_users");
+    return res ? JSON.parse(res) : [];
+  }
+  async saveActiveUsers(users: ActiveUser[]) {
+    await this.fetchRedis("set", "pitchslap_active_users", JSON.stringify(users));
+  }
+
+  async getRateLimits() {
+    const res = await this.fetchRedis("get", "pitchslap_rate_limits");
+    return res ? JSON.parse(res) : [];
+  }
+  async saveRateLimits(data: RateLimitEntry[]) {
+    await this.fetchRedis("set", "pitchslap_rate_limits", JSON.stringify(data));
+  }
+
+  async getWhitelistedIPs() {
+    const res = await this.fetchRedis("get", "pitchslap_whitelisted_ips");
+    return res ? JSON.parse(res) : [];
+  }
+  async saveWhitelistedIPs(ips: string[]) {
+    await this.fetchRedis("set", "pitchslap_whitelisted_ips", JSON.stringify(ips));
+  }
+}
 
 // --- Factory ---
 const isDevelopment = process.env.NODE_ENV !== 'production';
 let adapter: StorageAdapter;
 
-if (isDevelopment) {
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+if (redisUrl && redisToken) {
+  // If Redis credentials map is provided, ALWAYS use Redis (even locally if keys are in .env)
+  adapter = new RedisAdapter(redisUrl, redisToken);
+  console.log("STORAGE: Using Upstash Redis Adapter for persistence.");
+} else if (isDevelopment) {
   adapter = new FileSystemAdapter();
+  console.log("STORAGE: Using Local FileSystem Adapter.");
 } else {
   // In production (Netlify), fs is read-only or ephemeral.
-  // We default to InMemoryAdapter to prevent crashes.
-  // TODO: Add RedisAdapter check here if env vars are present.
+  // We default to InMemoryAdapter to prevent crashes if Redis is forgotten.
   adapter = new InMemoryAdapter();
+  console.log("STORAGE: WARNING! Using Ephemeral InMemoryAdapter on Production.");
 }
 
 // --- Exported Functions (Preserving API) ---
@@ -319,3 +421,7 @@ export async function getRateLimitStatusAsync(ip: string): Promise<{ remaining: 
     const recent = entry.timestamps.filter(ts => ts > cutoff);
     return { remaining: Math.max(0, RATE_LIMIT_MAX - recent.length) };
 }
+
+export async function getWhitelistedIPs() { return adapter.getWhitelistedIPs(); }
+export async function saveWhitelistedIPs(ips: string[]) { return adapter.saveWhitelistedIPs(ips); }
+

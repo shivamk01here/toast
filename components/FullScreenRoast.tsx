@@ -11,6 +11,7 @@ import { RoastResultData } from "@/types/roast";
 import { LOADING_MESSAGES } from "@/lib/quotes";
 import CringeMeter from "./CringeMeter";
 import FeedbackModal from "./FeedbackModal";
+import FakeDoorModal from "./FakeDoorModal";
 
 interface FullScreenRoastProps {
   isOpen: boolean;
@@ -74,7 +75,18 @@ export default function FullScreenRoast({
     if (!roastCardRef.current) return null;
     try {
       await document.fonts.ready;
-      return await toPng(roastCardRef.current, { cacheBust: true, pixelRatio: 2 });
+      return await toPng(roastCardRef.current, { 
+        cacheBust: true, 
+        pixelRatio: 2,
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left',
+          width: roastCardRef.current.offsetWidth + 'px',
+          height: roastCardRef.current.offsetHeight + 'px',
+        },
+        width: roastCardRef.current.offsetWidth,
+        height: roastCardRef.current.offsetHeight,
+      });
     } catch (err) {
       console.error("Image gen failed:", err);
       return null;
@@ -242,13 +254,12 @@ export default function FullScreenRoast({
 
 
               {/* ── LEFT: TICKET CARD ── */}
-              <div className="flex-1 min-w-0 flex flex-col items-center gap-4">
-                <div
-                  ref={roastCardRef}
-                  className={`w-full md:w-auto max-w-[calc(100vw-2.5rem)] md:max-w-2xl ${st.bg} ${st.text} font-marker tracking-wide border-4 ${st.border} shadow-[6px_6px_0_0_rgba(0,0,0,0.8)] md:shadow-[8px_8px_0_0_rgba(0,0,0,0.8)] mx-auto`}
-
-
-                >
+              <div className="flex-1 min-w-0 flex flex-col items-center gap-4 w-full">
+                {/* Capture wrapper prevents clipping of shadows or text from vw unit bugs in html-to-image */}
+                <div ref={roastCardRef} className="p-3 md:p-4 w-full flex justify-center bg-transparent overflow-visible">
+                  <div
+                    className={`w-full max-w-full md:max-w-2xl ${st.bg} ${st.text} font-simple tracking-wide border-4 ${st.border} shadow-[6px_6px_0_0_rgba(0,0,0,0.8)] md:shadow-[8px_8px_0_0_rgba(0,0,0,0.8)] mx-auto`}
+                  >
                   {/* Ticket header */}
                   <div className={`${st.headerBg} ${st.headerText} p-4 flex items-center gap-4`}>
                     {/* Avatar */}
@@ -286,7 +297,7 @@ export default function FullScreenRoast({
                   <div className="p-5 flex flex-col gap-5 bg-white text-black">
                     {/* Roast — direct, no label, character voice */}
                     <div className="border-l-4 border-red-500 pl-4">
-                      <p className="text-xl md:text-2xl font-marker leading-relaxed">
+                      <p className="text-xl md:text-2xl font-simple font-bold leading-relaxed">
                         &ldquo;{result.roast}&rdquo;
                       </p>
 
@@ -301,7 +312,7 @@ export default function FullScreenRoast({
                     {result.tip && (
                       <div className="bg-black/5 border border-current/20 rounded px-4 py-3">
                         <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">💡 The real problem</p>
-                        <p className="text-base font-marker leading-relaxed">{result.tip}</p>
+                        <p className="text-base font-simple font-bold leading-relaxed">{result.tip}</p>
 
                       </div>
                     )}
@@ -348,6 +359,7 @@ export default function FullScreenRoast({
                     </a>
                   </div>
 
+                </div>
                 </div>
 
                 {/* Under-card link */}
@@ -491,87 +503,7 @@ export default function FullScreenRoast({
         )}
 
         {/* ── FAKE DOOR MODAL ──────────────────────────── */}
-        {showFakeDoor && (
-          <div
-            className="fixed inset-0 z-[80] flex flex-col items-center p-4 py-8 bg-black/90 backdrop-blur-md overflow-y-auto"
-            onClick={() => setShowFakeDoor(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="mt-auto mb-auto bg-[#5CE1E6] border-4 border-black p-6 md:p-8 w-full max-w-md shadow-[12px_12px_0_0_#fff] relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setShowFakeDoor(false)}
-                className="absolute -top-4 -right-4 w-9 h-9 bg-black text-white rounded-full flex items-center justify-center border-2 border-white hover:scale-110 transition-transform"
-              >
-                <X size={18} />
-              </button>
-
-              {!waitlistSuccess ? (
-                <>
-                  <h3 className="font-heading font-black text-3xl uppercase mb-2 leading-none">
-                    You caught us early! 🫣
-                  </h3>
-                  <p className="font-bold text-lg mb-6 leading-snug">
-                    The Extension drops next week.{" "}
-                    <span className="bg-black text-white px-1">480 people</span> are already in.
-                  </p>
-                  <form 
-                    onSubmit={async (e) => { 
-                      e.preventDefault(); 
-                      try {
-                        await fetch('/api/waitlist', {
-                          method: 'POST',
-                          body: JSON.stringify({ email: emailWaitlist })
-                        });
-                        setWaitlistSuccess(true);
-                      } catch (err) {
-                        console.error("Waitlist error", err);
-                        // Still show success to user for better UX on "fake door"
-                        setWaitlistSuccess(true);
-                      }
-                    }} 
-                    className="flex flex-col gap-4"
-                  >
-                    <input
-                      type="email"
-                      required
-                      placeholder="Enter email to get 50% off"
-                      value={emailWaitlist}
-                      onChange={(e) => setEmailWaitlist(e.target.value)}
-                      className="w-full p-4 border-2 border-black font-bold focus:outline-none"
-                    />
-                    <button
-                      type="submit"
-                      className="w-full py-4 bg-black text-white font-black uppercase tracking-wider hover:bg-gray-800 transition-colors"
-                    >
-                      Join Waitlist
-                    </button>
-                  </form>
-                  <p className="text-xs font-bold mt-4 opacity-60 text-center">
-                    We won&apos;t spam you. We&apos;re too lazy.
-                  </p>
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="text-6xl mb-4">🎉</div>
-                  <h3 className="font-heading font-black text-2xl uppercase mb-2">
-                    You&apos;re on the list!
-                  </h3>
-                  <p className="font-bold mb-8">We&apos;ll roast your inbox soon.</p>
-                  <button
-                    onClick={() => setShowFakeDoor(false)}
-                    className="px-6 py-2 border-2 border-black font-bold uppercase hover:bg-white transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          </div>
-        )}
+        <FakeDoorModal isOpen={showFakeDoor} onClose={() => setShowFakeDoor(false)} />
 
         {/* ── FEEDBACK MODAL ──────────────────────────── */}
         <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} />

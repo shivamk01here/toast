@@ -7,6 +7,7 @@ import RoastInput from "@/components/RoastInput";
 import FullScreenRoast from "@/components/FullScreenRoast";
 import FeedbackModal from "@/components/FeedbackModal";
 import WaitlistModal from "@/components/WaitlistModal";
+import FakeDoorModal from "@/components/FakeDoorModal";
 
 import { PERSONA_MAP } from "@/lib/personas";
 import { PersonaKey, RoastResultData, RoastMode } from "@/types/roast";
@@ -23,6 +24,7 @@ export default function Home() {
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showWaitlist, setShowWaitlist] = useState(false);
+  const [showFakeDoor, setShowFakeDoor] = useState(false);
   const [headerSubtitle, setHeaderSubtitle] = useState(HEADER_SUBTITLES[0]);
 
   const [victimCount, setVictimCount] = useState(2500);
@@ -253,11 +255,17 @@ export default function Home() {
 
       </div>
 
-      {/* DEVELOPER FOOTER */}
-      <footer className="mt-12 text-center pb-8">
+      <footer className="mt-12 text-center pb-8 flex flex-col md:flex-row items-center justify-center gap-2">
         <p className="text-[10px] font-black uppercase tracking-widest text-[#FF66C4]">
            CONTACT DEV FOR ANY COLLABORATION 😇 O:) : <a href="mailto:pitchx26@gmail.com" className="underline hover:text-black decoration-2">pitchx26@gmail.com</a>
         </p>
+        <span className="hidden md:inline text-white/30 px-2">•</span>
+        <button 
+          onClick={() => setShowFakeDoor(true)}
+          className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-white transition-colors underline decoration-2 cursor-pointer"
+        >
+          DOWNLOAD EXTENSION
+        </button>
       </footer>
 
       {/* FEEDBACK MODAL & FAB */}
@@ -277,6 +285,9 @@ export default function Home() {
 
       {/* WAITLIST MODAL */}
       <WaitlistModal isOpen={showWaitlist} onClose={() => setShowWaitlist(false)} />
+
+      {/* FAKE DOOR MODAL */}
+      <FakeDoorModal isOpen={showFakeDoor} onClose={() => setShowFakeDoor(false)} />
 
       {/* FULL SCREEN EXPERIENCE */}
 

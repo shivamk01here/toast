@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PERSONA_MAP } from "@/lib/personas";
 import { PersonaKey, RoastResultData } from "@/types/roast";
 import { getFallbackRoast } from "@/lib/roast_fallback";
-import { checkAndIncrementRateLimitAsync, getRateLimitStatusAsync } from "@/lib/storage";
+import { checkAndIncrementRateLimitAsync, getRateLimitStatusAsync, getWhitelistedIPs } from "@/lib/storage";
 import { sendTelegramNotification } from "@/lib/telegram";
 
 export const runtime = "nodejs";
@@ -110,11 +110,27 @@ export async function POST(req: NextRequest) {
     || req.headers.get('x-real-ip')
     || '127.0.0.1';
 
-  // Check rate limit
-  const rateLimit = await checkAndIncrementRateLimitAsync(ip);
+  // Check Whitelist first
+  const whitelistedIPs = await getWhitelistedIPs();
+  const isWhitelisted = whitelistedIPs.includes(ip);
+
+  // Check rate limit (only if not whitelisted)
+  let rateLimit = { allowed: true, remaining: 999 };
+  if (!isWhitelisted) {
+    rateLimit = await checkAndIncrementRateLimitAsync(ip);
+  }
+
   if (!rateLimit.allowed) {
+    let country = "Unknown";
+    try {
+      // Best-effort geo lookup for telegram alert
+      const geoRes = await fetch(`https://ipapi.co/${ip}/json/`);
+      const geoData = await geoRes.json();
+      if (geoData.country_name) country = geoData.country_name;
+    } catch (e) {}
+
     await sendTelegramNotification(
-      `⚠️ <b>RATE LIMIT HIT</b>\nIP: \`${ip}\` exhausted free roasts.`
+      `⚠️ <b>RATE LIMIT HIT</b>\nIP: \`${ip}\`\nCountry: ${country}\nUser exhausted 3 free roasts.`
     );
     return NextResponse.json(
       { error: "RATE_LIMIT_EXCEEDED", message: "You've used all 3 free roasts for today. Come back in 24 hours or get the extension for unlimited roasts!" },
